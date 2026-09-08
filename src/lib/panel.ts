@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { calcularFlujo, type NaturalezaMes } from '@/lib/flujo'
 import { f29PorMes, type F29DelMes } from '@/lib/sii/f29'
 import { MESES, MESES_CORTOS } from '@/lib/dominio'
+import { vencimientosHasta, type Vencimiento } from '@/lib/vencimientos'
 
 /**
  * Panel de inicio, en lenguaje de dueño de empresa y no de contador.
@@ -23,15 +24,7 @@ import { MESES, MESES_CORTOS } from '@/lib/dominio'
 /** Dias que mira el panel hacia adelante. Es el plazo en que todavia se puede hacer algo. */
 export const DIAS_VENTANA = 15
 
-export interface Vencimiento {
-  fecha: string
-  dias: number
-  concepto: string
-  /** Que hacer, en imperativo. */
-  accion: string
-  monto: number
-  vencido: boolean
-}
+export type { Vencimiento } from '@/lib/vencimientos'
 
 export interface Deuda {
   quien: string
@@ -292,64 +285,21 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
   const f29EnCurso = filasF29.find((f) => f.mesPeriodo === mesActual) ?? null
 
   // ── 2 y 3. Vencimientos ────────────────────────────────────────────────────
-  const todos: Vencimiento[] = []
-
-  const cuotas = await prisma.cuotaObligacion.findMany({
-    where: { estado: { in: ['pendiente', 'atrasada'] }, obligacion: { activa: true } },
-    include: { obligacion: true },
-  })
-  for (const c of cuotas) {
-    const dia = c.obligacion.tipo === 'linea_credito' ? 5 : 30
-    const vence = new Date(Date.UTC(c.anio, c.mes - 1, dia, 12))
-    if (vence > hasta) continue
-    const esFogape = c.obligacion.tipo === 'linea_credito'
-    todos.push({
-      fecha: iso(vence),
-      dias: dias(vence),
-      concepto: esFogape
-        ? `Cuota Fogape de ${MESES[c.mes - 1]?.toLowerCase()}`
-        : `Convenio TGR ${c.obligacion.numero}`,
-      accion: 'Paga la cuota',
-      monto: c.monto,
-      vencido: vence < hoy,
-    })
-  }
-
-  const cotizaciones = await prisma.cotizacionPrevisional.findMany({
-    where: { estado: { in: ['pendiente', 'atrasada'] } },
-  })
-  for (const c of cotizaciones) {
-    const vence = c.fechaVencimiento ?? new Date(Date.UTC(c.anioPeriodo, c.mesPeriodo, 13, 12))
-    if (vence > hasta) continue
-    todos.push({
-      fecha: iso(vence),
-      dias: dias(vence),
-      concepto: `Cotización previsional de ${MESES[c.mesPeriodo - 1]?.toLowerCase()}`,
-      accion: 'Paga en Previred',
-      monto: c.monto,
-      vencido: vence < hoy,
-    })
-  }
-
-  if (f29 && f29.total > 0) {
-    const vence = new Date(`${f29.venceEl}T12:00:00Z`)
-    if (vence <= hasta) {
-      todos.push({
-        fecha: f29.venceEl,
-        dias: dias(vence),
-        concepto: `F29 del período ${MESES[f29.mesPeriodo - 1]?.toLowerCase()}`,
-        accion: 'Declara y paga el F29',
-        monto: f29.total,
-        vencido: vence < hoy,
-      })
-    }
-  }
-
-  todos.sort((a, b) => a.fecha.localeCompare(b.fecha))
+  //
+  // El cálculo vive en src/lib/vencimientos.ts porque lo comparten esta pantalla,
+  // con ventana de 15 días, y el aviso por correo, con ventana de 5. Con dos
+  // implementaciones una se habría quedado atrás y el correo diría algo distinto
+  // de la pantalla a la que apunta.
+  const todos = await vencimientosHasta({ hoy, hasta, f29 })
   const atrasados = todos.filter((v) => v.vencido)
   const proximos = todos.filter((v) => !v.vencido)
   const totalAtrasado = atrasados.reduce((a, v) => a + v.monto, 0)
   const totalProximos = todos.reduce((a, v) => a + v.monto, 0)
+
+  // Las cotizaciones atrasadas se listan además como deuda, más abajo.
+  const cotizaciones = await prisma.cotizacionPrevisional.findMany({
+    where: { estado: { in: ['pendiente', 'atrasada'] } },
+  })
 
   // ── 6. Qué cuesta más ──────────────────────────────────────────────────────
   const bruto = GRUPOS_EGRESO.map((g) => ({

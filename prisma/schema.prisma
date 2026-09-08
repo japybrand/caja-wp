@@ -545,3 +545,29 @@ model DeclaracionF29 {
   @@unique([anioPeriodo, mesPeriodo])
   @@index([estado])
 }
+
+/// Avisos por correo ya enviados, para no repetir el mismo mensaje todos los dias.
+///
+/// Sin esta tabla, el aviso de una cuota que vence en cinco dias llegaria cinco
+/// veces, y el de la bandeja estancada llegaria todos los dias hasta que alguien la
+/// vacie. Un aviso que se repite se deja de leer, y entonces deja de servir el dia
+/// que trae algo nuevo.
+model AvisoEnviado {
+  id String @id @default(cuid())
+
+  /// carga_mensual | desfase_cartola | obligacion | bandeja
+  tipo  String
+  /// El hecho concreto que se avisa: "2026-08" para un mes, "cuota:<id>" para una
+  /// cuota, "f29:2026-08" para un formulario. Junto con el tipo identifica el aviso.
+  clave String
+
+  enviadoEn DateTime @default(now())
+  /// Que se mando, para poder revisarlo sin entrar a Resend.
+  asunto    String
+  destino   String
+  /// Vacio si salio bien. Con texto si Resend rechazo el envio.
+  error     String   @default("")
+
+  @@unique([tipo, clave])
+  @@index([enviadoEn])
+}

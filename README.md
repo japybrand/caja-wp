@@ -1115,6 +1115,43 @@ la pantalla de consentimiento. Con un solo usuario y un scope de solo lectura la
 verificación de Google es trámite, y es lo que corresponde hacer si esto va a quedar
 funcionando solo.
 
+### Los cuatro avisos por correo
+
+| Aviso | Cuándo evalúa | Condición | Repite |
+|---|---|---|---|
+| Falta cargar el mes anterior | día 11 | al mes anterior le falta cartola, registro de ventas o registro de compras | una vez |
+| Cartola atrasada | lunes | el último movimiento bancario tiene más de 7 días | cada 7 días |
+| Obligación por vencer | diario | cuota de convenio, cuota Fogape, cotización o F29 a 5 días o menos | una vez por obligación |
+| Bandeja estancada | diario | hay movimientos por revisar creados hace más de 3 días | cada 7 días |
+
+El día 11 y no el 1 porque el SII publica el registro del período dentro de los
+primeros diez días y la cartola del mes cerrado llega en esa misma ventana: antes
+del 11 el hueco es normal y avisar sería ruido.
+
+Sin la tabla `AvisoEnviado` el aviso de una cuota que vence en cinco días llegaría
+cinco veces y el de la bandeja llegaría todos los días. Un aviso que se repite se
+deja de leer, y entonces deja de servir el día que trae algo nuevo. Los avisos que
+describen un hecho —el día 11, una cuota concreta— no se repiten nunca; los que
+describen una situación que persiste se repiten cada siete días mientras dure. Un
+envío fallido no cuenta como avisado, así que se reintenta al día siguiente.
+
+Las obligaciones van en un correo cada una y no en un resumen: cada una se paga en
+su plataforma, y juntarlas obligaría a releer el mismo correo para ir tachando.
+
+`npm run probar-alertas -- --fecha 2026-10-11` imprime lo que saldría ese día sin
+mandar nada. Tres de las cuatro reglas dependen del calendario, así que sin poder
+mover la fecha probarlas significaría esperar al día correcto.
+
+Sin `RESEND_API_KEY` el envío no falla: escribe el correo en el log y sigue. Así el
+cron se prueba entero sin gastar correos.
+
+### El cálculo de vencimientos es uno solo
+
+El panel mira 15 días y el correo 5. Estaban por escribirse dos veces, y con dos
+implementaciones una se habría quedado atrás en el primer cambio: el correo diría
+algo distinto de la pantalla a la que apunta. `src/lib/vencimientos.ts` lo resuelve
+una vez y recibe la ventana como argumento.
+
 ### Una corrida diaria, y qué hacer si se queda corta
 
 El plan Hobby de Vercel permite una sola corrida de cron al día, así que la ingesta
@@ -1194,4 +1231,7 @@ sesión **a propósito**, así que todo lo que cuelgue de ellas tiene que valida
 | `npm run db:studio` | Prisma Studio |
 | `npm run exportar-datos` | Respalda la base entera a `respaldo/`. No escribe en la base |
 | `npm run proyeccion` | Recalcula las proyecciones de oct-dic desde el gasto real. `--firme` |
+| `npm run probar-alertas` | Muestra qué avisos saldrían. `-- --fecha AAAA-MM-DD` y `--firme` |
+| `npm run importar-datos` | Reconstruye el respaldo en la base destino. `--firme` para aplicar |
+| `npm run verificar-migracion` | Compara filas, enlaces y cifras derivadas contra el respaldo |
 | `npm run db:sqlite` / `db:postgres` | Cambia el provider de la base, con `directUrl` en Postgres |
