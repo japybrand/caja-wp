@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NUMEROS_MES, type Grupo } from '@/lib/dominio'
 import { signo } from '@/lib/sii/ventas'
+import { ivaPorMesDePago } from '@/lib/sii/iva'
 
 /**
  * Replica del flujo de caja del Excel "Flujo de Caja 2026 - Japybrand WP".
@@ -27,6 +28,17 @@ import { signo } from '@/lib/sii/ventas'
 
 /** Nombre de la fila cuyo valor puede venir del SII. */
 const CATEGORIA_VENTAS = 'Ventas del mes'
+
+/**
+ * Fila del IVA. Su monto sale del F29: debito de las ventas menos credito de las
+ * compras, con el remanente arrastrado.
+ *
+ * Ojo con el mes: el F29 de un periodo se paga hasta el dia 20 del mes siguiente,
+ * asi que la fila de septiembre lleva el IVA del periodo agosto. La planilla lo
+ * estimaba y se equivocaba en millones: marzo iba 2,2 millones abajo y abril 2
+ * millones arriba.
+ */
+const CATEGORIA_IVA = 'Pago de impuestos IVA'
 
 /**
  * De dónde salió el monto de cada mes en una fila híbrida.
@@ -135,6 +147,7 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     ventasSII,
     mesesBancarios,
     reversasBancarias,
+    ivaDelF29,
     cuotasObligacion,
   ] = await Promise.all([
     prisma.categoria.findMany({
@@ -173,6 +186,8 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
       where: { anio, esReversa: true, categoriaManualId: { not: null } },
       _sum: { monto: true },
     }),
+    // IVA del F29, indexado por el mes en que sale la plata.
+    ivaPorMesDePago(anio),
     // Cuotas de convenio y de la linea Fogape del ano.
     prisma.cuotaObligacion.findMany({
       where: { anio, obligacion: { categoriaId: { not: null }, activa: true } },
@@ -261,6 +276,24 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
       origen[mes - 1] = 'sii'
     }
     origenPorCategoria.set(categoriaVentas.id, origen)
+  }
+
+  // --- IVA del F29: pisa al valor manual en los meses que tienen los dos registros.
+  //
+  // Se exige que el mes tenga ventas Y compras cargadas. Con solo uno de los dos el
+  // numero seria un debito sin credito o al reves, peor que la estimacion que
+  // reemplaza.
+  const categoriaIva = categorias.find((c) => c.nombre === CATEGORIA_IVA)
+  if (categoriaIva) {
+    const montos = montosPorCategoria.get(categoriaIva.id) ?? CERO_12()
+    montosPorCategoria.set(categoriaIva.id, montos)
+    const origen = Array<OrigenMonto>(12).fill('manual')
+    for (const [mes, iva] of ivaDelF29) {
+      if (!iva.completo) continue
+      montos[mes - 1] = iva.aPagar
+      origen[mes - 1] = 'sii'
+    }
+    if (origen.some((o) => o === 'sii')) origenPorCategoria.set(categoriaIva.id, origen)
   }
 
   // --- Calendario de obligaciones: pisa al valor manual en los meses con cuota.

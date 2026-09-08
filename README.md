@@ -94,10 +94,10 @@ el calendario mes a mes hasta febrero de 2028 con una columna por obligación y 
 combinado, que es el número que interesa: cuánto hay que pagar cada mes pase lo que pase.
 Abajo, las cotizaciones previsionales con sus días de atraso.
 
-**`/`** — el panel de inicio. Cinco tarjetas arriba (saldo de la cuenta, proyección a fin de
-mes y a 90 días, deuda fija del mes y pendientes de revisar), lo que vence en 15 días,
-ingresos contra egresos por mes con la línea de saldo acumulado, el desglose de egresos del
-mes en curso, la comparación con el mes anterior y los meses que cierran en negativo.
+**`/`** — el panel de inicio, en lenguaje de dueño y no de contador. Siete preguntas: cuánta
+plata hay hoy y cuánta falta para cerrar el mes, qué está atrasado, qué vence en 15 días,
+si alcanza o no, cuánto IVA hay que pagar y por qué, qué está costando más, y a quién se le
+debe. Los gráficos van abajo, después de lo importante.
 
 **`/proveedores`** — los 51 proveedores y colaboradores agrupados por categoría, con su moneda
 por defecto, si están activos, cuántos movimientos tienen y su total del año. El campo de
@@ -576,7 +576,7 @@ diferencia contra la planilla), las notas de crédito con el documento que anula
 ámbar cuando corrigen otro mes— y el ranking de clientes del año con **el porcentaje que
 representa cada uno sobre la facturación**, con barra de participación.
 
-### Compras: fuente futura para proyectar el F29
+### Compras del SII (implementado en la fase 7)
 
 **No implementado todavía.** Los archivos ya están en `sii/compras` y el formato quedó
 verificado: 72 documentos entre enero y septiembre, **13.812.808** en total con **2.263.714**
@@ -984,6 +984,82 @@ entera borraría gastos reales que solo están en la planilla.
 
 ---
 
+## Fase 7: el panel en lenguaje de dueño
+
+La app estaba pensada como planilla y pedía saber contabilidad para leerla. El panel
+de inicio responde siete preguntas concretas, cada una con el número grande, una
+frase que lo explica y, si hay que hacer algo, un verbo con fecha.
+
+### El saldo acumulado del flujo no es plata
+
+La grilla de `/flujo` cierra septiembre en −26 millones, pero la cuenta tiene 113.711
+y nunca podría llegar ahí: simplemente no se paga todo. Ese número es la **brecha
+acumulada** entre lo comprometido y lo que entró, no un pronóstico de caja.
+
+Mostrarlo como "cuánta plata vas a tener" sería mentir. El panel proyecta hacia
+adelante desde el saldo real del banco —saldo de hoy, más lo que falta cobrar del
+mes, menos lo que falta pagar— y el resultado se lee como "te faltan X para cubrir
+el mes", que es la pregunta verdadera.
+
+La proyección queda **corta a propósito** cuando el registro de ventas del mes está a
+medias, y el panel lo dice en vez de estimar desde promedios. Estimar desde promedios
+es exactamente lo que hacía la planilla, y por eso fallaba.
+
+### El IVA se calcula, no se estima
+
+Con el Registro de Compras cargado, el IVA sale del F29: débito fiscal de las ventas
+menos crédito fiscal de las compras, con arrastre de remanente. La planilla lo
+estimaba y erraba en millones:
+
+| Período | Planilla | Real | Diferencia |
+|---|---:|---:|---:|
+| Enero | — | 1.129.552 | +1.129.552 |
+| Marzo | 637.943 | 2.836.484 | **+2.198.541** |
+| Abril | 3.601.060 | 1.642.547 | **−1.958.513** |
+| Agosto | 2.429.918 | 1.470.812 | −959.106 |
+
+**El período y el mes de pago no son el mismo.** El F29 se declara y paga hasta el día
+20 del mes siguiente, así que la fila de septiembre lleva el IVA del período agosto.
+`ivaPorMesDePago()` hace esa traslación, y mira también diciembre del año anterior,
+que se paga en enero.
+
+**El remanente se arrastra.** Si el crédito supera al débito no se devuelve plata:
+queda a favor y baja lo que se paga el mes siguiente. En 2026 nunca ocurrió, pero la
+lógica está: sin ella, el primer mes con remanente mostraría un pago que no
+corresponde.
+
+**Un mes solo entra al flujo si tiene los dos registros cargados.** Con uno solo el
+número sería un débito sin crédito, peor que la estimación que reemplaza.
+
+### El SII repite documentos en líneas de continuación
+
+El registro de compras trae el mismo documento varias veces con el mismo tipo, folio
+y RUT pero **todos los montos en blanco**: son el detalle de otros impuestos, no
+documentos nuevos. Sin saltarlas, el upsert por `(tipo, folio, rut)` pisa la fila
+buena con ceros. Así desaparecían 15.165 de crédito en agosto y 24.270 en septiembre.
+
+> Al importar cualquier registro del SII, una fila sin monto total es continuación de
+> la anterior, no un documento.
+
+### Reglas de diseño del panel
+
+**El color solo comunica estado.** Aparece dos veces: en lo atrasado y en la plata que
+falta. Si todo estuviera al día, el panel no tendría un solo color. Las barras y el
+gráfico van en gris a propósito — colorearlos no agrega información y le resta fuerza
+a lo que sí exige una decisión.
+
+**Nada de jerga sin explicar.** "Débito fiscal" aparece siempre después de "le
+cobraste a tus clientes", nunca solo.
+
+**Lo que requiere acción lleva verbo y fecha.** "Paga en Previred antes del 13", no
+"vence el 13".
+
+**El orden es por urgencia, no por lógica contable**: cuánta plata hay, qué está en
+rojo, qué viene. Los gráficos van abajo, después de lo importante, y el detalle fino
+sigue viviendo en `/flujo` y `/obligaciones`.
+
+---
+
 ## Scripts
 
 | Comando | Qué hace |
@@ -1013,6 +1089,7 @@ entera borraría gastos reales que solo están en la planilla.
 | `npm run clasificar-bandeja` | Clasifica retiros, servicios legales y el cargo partido de MOLINA OVALLE. `--firme` |
 | `npm run importar-global66` | Importa el export de Global66 y reparte los pagos internacionales. `--firme` |
 | `npm run global66-enero` | Carga los envíos directos desde el monedero CLP de enero. `--firme` |
+| `npm run importar-compras` | Importa el Registro de Compras del SII y muestra el IVA. `--firme` |
 | `npm run db:seed` | Solo precarga las categorías |
 | `npm run db:studio` | Prisma Studio |
 | `npm run db:sqlite` / `db:postgres` | Cambia el provider de la base |

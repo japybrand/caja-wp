@@ -27,7 +27,7 @@ const ZONAS: { tipo: TipoFuente; titulo: string; pista: string; acepta: string }
   {
     tipo: 'compras',
     titulo: 'Compras del SII',
-    pista: 'RCV_COMPRA_REGISTRO_…_AAAAMM.csv',
+    pista: 'RCV_COMPRA_REGISTRO_…_AAAAMM.csv · es el crédito fiscal del IVA',
     acepta: '.csv',
   },
   {
@@ -267,8 +267,8 @@ export function PanelCargar({ anio, estado, hoy }: Props) {
           .xls aunque por dentro sea xlsx, así que por nombre se confundiría con una cartola.
         </p>
         <p className="mt-2 max-w-2xl text-[11px] text-tenue">
-          Las compras del SII todavía no se importan: están anotadas como fuente futura para
-          proyectar el F29. La zona acepta el archivo y avisa.
+          El registro de compras es el crédito fiscal: con él, el IVA a pagar se calcula en vez
+          de estimarse. La fila "Pago de impuestos IVA" del flujo sale de ahí. La zona acepta el archivo y avisa.
         </p>
 
         <div className="h-8" />

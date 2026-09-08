@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { requerirSesion } from '@/lib/sesion'
 import { parsearCartola } from '@/lib/banco/parser'
 import { parsearVentas, periodoDelNombre } from '@/lib/sii/ventas'
+import { parsearCompras } from '@/lib/sii/compras'
 import { parsearExportG66, esExportGlobal66 } from '@/lib/global66/parser'
 import { hashMovimiento } from '@/lib/global66/reparto'
 
@@ -93,11 +94,58 @@ export async function cargarArchivo(
   if (tipoPedido === 'cartola') return cargarCartola(nombre, datos)
   if (tipoPedido === 'ventas') return cargarVentas(nombre, datos)
   if (tipoPedido === 'global66') return cargarGlobal66(nombre, datos)
+  return cargarCompras(nombre, datos)
+}
+
+/**
+ * Registro de Compras del SII: es el credito fiscal del F29.
+ *
+ * Con el debito de las ventas ya cargado, el IVA a pagar deja de ser una
+ * estimacion. La planilla lo estimaba y erraba en millones.
+ */
+async function cargarCompras(nombre: string, datos: Buffer): Promise<ResultadoCarga> {
+  const base = { archivo: nombre, tipo: 'compras' as const }
+  let archivo
+  try {
+    archivo = parsearCompras(datos.toString('latin1'), nombre)
+  } catch (error: unknown) {
+    return { ...base, ok: false, error: error instanceof Error ? error.message : 'No se pudo leer.' }
+  }
+  if (archivo.documentos.length === 0) {
+    return { ...base, ok: false, error: 'El archivo no trae documentos.' }
+  }
+
+  let nuevos = 0
+  for (const d of archivo.documentos) {
+    const clave = {
+      tipoDocumento_folio_rutProveedor: {
+        tipoDocumento: d.tipoDocumento,
+        folio: d.folio,
+        rutProveedor: d.rutProveedor,
+      },
+    }
+    const previo = await prisma.documentoCompra.findUnique({ where: clave })
+    await prisma.documentoCompra.upsert({
+      where: clave,
+      create: { ...d, archivoOrigen: nombre },
+      update: { ...d, archivoOrigen: nombre },
+    })
+    if (!previo) nuevos += 1
+  }
+
+  const credito = archivo.documentos.reduce((a, d) => a + d.montoIVARecuperable, 0)
+  const total = archivo.documentos.reduce((a, d) => a + d.montoTotal, 0)
+  const pesos = (n: number): string => new Intl.NumberFormat('es-CL').format(n)
   return {
     ...base,
-    ok: false,
-    error:
-      'Las compras del SII todavía no se importan: están anotadas como fuente futura para proyectar el F29.',
+    ok: true,
+    periodo: `${MESES[archivo.mes - 1]} ${archivo.anio}`,
+    nuevos,
+    yaEstaban: archivo.documentos.length - nuevos,
+    cambios: [
+      `${archivo.documentos.length} documentos por ${pesos(total)}.`,
+      `Crédito fiscal del período: ${pesos(credito)}. Se descuenta del IVA que pagas.`,
+    ],
   }
 }
 

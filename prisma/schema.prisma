@@ -473,3 +473,32 @@ model MovimientoGlobal66 {
   @@index([anio, mes])
   @@index([tipo])
 }
+
+/// Documento del Registro de Compras del SII.
+///
+/// Existe por una sola razon: el credito fiscal. El IVA a pagar es el debito de las
+/// ventas menos el credito de las compras, y sin este registro ese numero hay que
+/// estimarlo. La planilla lo estimaba, y se equivocaba en millones.
+model DocumentoCompra {
+  id                    String   @id @default(cuid())
+  tipoDocumento         Int
+  folio                 String
+  rutProveedor          String
+  razonSocial           String
+  fechaDocto            DateTime
+  montoExento           Int
+  montoNeto             Int
+  /// Credito fiscal: el IVA que se puede descontar del debito.
+  montoIVARecuperable   Int
+  /// IVA que la ley no deja descontar. Es costo, no credito.
+  montoIVANoRecuperable Int      @default(0)
+  montoTotal            Int
+  mes                   Int
+  anio                  Int
+  archivoOrigen         String
+
+  importadoEn DateTime @default(now())
+
+  @@unique([tipoDocumento, folio, rutProveedor])
+  @@index([anio, mes])
+}
