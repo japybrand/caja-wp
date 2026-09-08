@@ -27,3 +27,6 @@ sii/
 
 # Export de movimientos de la cuenta Global66: pagos a colaboradores.
 global66/
+
+# Renders temporales para revisar el diseño. No es parte de la app.
+.vista/

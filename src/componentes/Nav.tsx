@@ -2,18 +2,30 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import {
+  Banknote,
+  Building2,
+  FileSpreadsheet,
+  Home,
+  Landmark,
+  ListFilter,
+  Receipt,
+  ScrollText,
+  Upload,
+  type LucideIcon,
+} from 'lucide-react'
 import { ANIO_ACTIVO } from '@/lib/dominio'
 
-const ENLACES = [
-  { href: '/', etiqueta: 'Inicio' },
-  { href: '/flujo', etiqueta: 'Flujo de caja' },
-  { href: '/movimientos', etiqueta: 'Movimientos' },
-  { href: '/ventas', etiqueta: 'Ventas' },
-  { href: '/banco', etiqueta: 'Banco' },
-  { href: '/obligaciones', etiqueta: 'Obligaciones' },
-  { href: '/proveedores', etiqueta: 'Proveedores' },
-  { href: '/reglas', etiqueta: 'Reglas' },
-  { href: '/cargar', etiqueta: 'Cargar' },
+const ENLACES: { href: string; etiqueta: string; icono: LucideIcon }[] = [
+  { href: '/', etiqueta: 'Inicio', icono: Home },
+  { href: '/flujo', etiqueta: 'Flujo', icono: FileSpreadsheet },
+  { href: '/movimientos', etiqueta: 'Movimientos', icono: ListFilter },
+  { href: '/ventas', etiqueta: 'Ventas', icono: Receipt },
+  { href: '/banco', etiqueta: 'Banco', icono: Banknote },
+  { href: '/obligaciones', etiqueta: 'Obligaciones', icono: Landmark },
+  { href: '/proveedores', etiqueta: 'Proveedores', icono: Building2 },
+  { href: '/reglas', etiqueta: 'Reglas', icono: ScrollText },
+  { href: '/cargar', etiqueta: 'Cargar', icono: Upload },
 ]
 
 interface Props {
@@ -23,50 +35,55 @@ interface Props {
 }
 
 export function Nav({ email, salir }: Props) {
-  const ruta = usePathname()
+  // Fuera del router de Next devuelve null: la barra igual tiene que renderizar.
+  const ruta = usePathname() ?? ''
 
   return (
-    <header className="flex items-center gap-6 border-b border-linea-fuerte bg-panel px-4 py-2">
-      <div className="flex items-baseline gap-2">
-        <span className="text-[13px] font-semibold tracking-tight">Caja WP</span>
-        <span className="text-[11px] text-tenue">Japybrand WP · {ANIO_ACTIVO}</span>
-      </div>
+    <header className="sticky top-0 z-10 border-b border-linea bg-superficie/85 backdrop-blur">
+      <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-2">
+        <Link href="/" className="flex items-baseline gap-2">
+          <span className="text-[13px] font-semibold tracking-[-0.01em]">Caja WP</span>
+          <span className="text-[11px] text-suave">{ANIO_ACTIVO}</span>
+        </Link>
 
-      {email ? (
-        <>
-          <nav className="flex items-center gap-1">
-            {ENLACES.map((enlace) => {
-              const activo = ruta === enlace.href || ruta.startsWith(enlace.href + '/')
-              return (
-                <Link
-                  key={enlace.href}
-                  href={enlace.href}
-                  className={
-                    'rounded px-2.5 py-1 text-[12px] transition-colors ' +
-                    (activo
-                      ? 'bg-white font-medium text-tinta shadow-[0_0_0_1px_var(--color-linea-fuerte)]'
-                      : 'text-tenue hover:bg-white/70 hover:text-tinta')
-                  }
+        {email ? (
+          <>
+            <nav className="flex items-center gap-0.5 overflow-x-auto">
+              {ENLACES.map(({ href, etiqueta, icono: Icono }) => {
+                const activo = href === '/' ? ruta === '/' : ruta.startsWith(href)
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    aria-current={activo ? 'page' : undefined}
+                    className={
+                      'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] whitespace-nowrap transition-colors ' +
+                      (activo
+                        ? 'bg-panel font-medium text-tinta'
+                        : 'text-tenue hover:bg-panel hover:text-tinta')
+                    }
+                  >
+                    <Icono size={14} strokeWidth={2} className={activo ? '' : 'text-suave'} />
+                    {etiqueta}
+                  </Link>
+                )
+              })}
+            </nav>
+
+            <div className="ml-auto flex items-center gap-3">
+              <span className="hidden text-[11px] text-suave lg:inline">{email}</span>
+              <form action={salir}>
+                <button
+                  type="submit"
+                  className="rounded-md px-2 py-1 text-[11px] text-tenue transition-colors hover:bg-panel hover:text-tinta"
                 >
-                  {enlace.etiqueta}
-                </Link>
-              )
-            })}
-          </nav>
-
-          <div className="ml-auto flex items-center gap-3">
-            <span className="text-[11px] text-tenue">{email}</span>
-            <form action={salir}>
-              <button
-                type="submit"
-                className="text-[11px] text-tenue underline underline-offset-2 hover:text-tinta"
-              >
-                Salir
-              </button>
-            </form>
-          </div>
-        </>
-      ) : null}
+                  Salir
+                </button>
+              </form>
+            </div>
+          </>
+        ) : null}
+      </div>
     </header>
   )
 }

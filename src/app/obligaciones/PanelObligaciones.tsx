@@ -1,18 +1,31 @@
+import { AlertTriangle, CalendarDays, CheckCircle2, Landmark, Users } from 'lucide-react'
 import type { EstadoObligaciones } from '@/lib/obligaciones'
-
-const clp = (n: number): string =>
-  new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(Math.round(n))
+import { Marca, Pagina, Tarjeta, Titular, Vacio, clp } from '@/componentes/ui'
 
 const ETIQUETA_TIPO: Record<string, string> = {
   convenio_tgr: 'Convenio',
   linea_credito: 'Línea de crédito',
 }
 
-function Dato({ etiqueta, valor, tono }: { etiqueta: string; valor: string; tono?: 'negativo' }) {
+/** Un dato suelto del resumen: rótulo arriba, cifra abajo. */
+function Dato({
+  etiqueta,
+  valor,
+  tono = 'neutro',
+}: {
+  etiqueta: string
+  valor: string
+  tono?: 'neutro' | 'negativo' | 'alerta'
+}) {
   return (
     <div>
-      <div className="text-[10px] uppercase tracking-wide text-tenue">{etiqueta}</div>
-      <div className={'cifra mt-0.5 text-[14px] ' + (tono === 'negativo' ? 'negativo' : '')}>
+      <div className="rotulo">{etiqueta}</div>
+      <div
+        className={
+          'cifra mt-1 text-[17px] font-medium tracking-[-0.01em] ' +
+          (tono === 'negativo' ? 'text-negativo' : tono === 'alerta' ? 'text-alerta' : '')
+        }
+      >
         {valor}
       </div>
     </div>
@@ -24,255 +37,260 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
   const { compromisos, totalCompromisos } = estado
 
   return (
-    <div className="px-4 py-4">
-      <div className="mb-4 flex items-baseline gap-3">
-        <h1 className="text-[15px] font-semibold tracking-tight">Obligaciones</h1>
-        <span className="text-[11px] text-tenue">
-          Convenios de la Tesorería, línea Fogape y cotizaciones previsionales
-        </span>
-      </div>
+    <Pagina
+      titulo="Obligaciones"
+      bajada="Convenios de la Tesorería, línea Fogape y cotizaciones previsionales"
+    >
+      <div className="grid gap-3">
+        {/* ── Resumen ──────────────────────────────────────────────────────── */}
+        <Tarjeta>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
+            <Dato etiqueta="Ya pagado" valor={clp(totales.pagado)} />
+            <Dato etiqueta="Pendiente" valor={clp(totales.pendiente)} tono="negativo" />
+            <Dato etiqueta="Cuotas por generar" valor={clp(totales.porGenerar)} />
+            <Dato
+              etiqueta="Mes más pesado"
+              valor={totales.peak ? clp(totales.peak.monto) : '—'}
+              tono="alerta"
+            />
+          </div>
+          {totales.peak ? (
+            <p className="mt-4 border-t border-linea pt-3 text-[12px] text-tenue">
+              El mes más pesado es {totales.peak.etiqueta}, con {clp(totales.peak.monto)} solo en
+              cuotas.
+            </p>
+          ) : null}
+        </Tarjeta>
 
-      {/* ── Resumen ─────────────────────────────────────────────────────────── */}
-      <div className="mb-5 grid grid-cols-2 gap-x-8 gap-y-3 rounded border border-linea bg-panel px-4 py-3 sm:grid-cols-4">
-        <Dato etiqueta="Ya pagado" valor={clp(totales.pagado)} />
-        <Dato etiqueta="Pendiente" valor={clp(totales.pendiente)} tono="negativo" />
-        <Dato etiqueta="Cuotas por generar" valor={clp(totales.porGenerar)} />
-        <Dato
-          etiqueta="Mes más pesado"
-          valor={totales.peak ? `${clp(totales.peak.monto)} · ${totales.peak.etiqueta}` : '—'}
-          tono="negativo"
-        />
-      </div>
+        {cotizacionesAtrasadas > 0 ? (
+          <Tarjeta titulo="Atención" icono={AlertTriangle} tono="negativo">
+            <p className="text-[12.5px]">
+              <span className="font-medium text-negativo">
+                {cotizacionesAtrasadas === 1
+                  ? '1 cotización previsional atrasada'
+                  : `${cotizacionesAtrasadas} cotizaciones previsionales atrasadas`}
+                .
+              </span>{' '}
+              <span className="text-tenue">
+                Las cotizaciones no están dentro de ningún convenio: se pagan mes a mes.
+              </span>
+            </p>
+          </Tarjeta>
+        ) : null}
 
-      {cotizacionesAtrasadas > 0 ? (
-        <div className="mb-5 rounded border border-negativo/30 bg-negativo/5 px-3 py-2 text-[12px]">
-          <span className="negativo font-medium">
-            {cotizacionesAtrasadas === 1
-              ? '1 cotización previsional atrasada'
-              : `${cotizacionesAtrasadas} cotizaciones previsionales atrasadas`}
-            .
-          </span>{' '}
-          <span className="text-tenue">
-            Las cotizaciones no están dentro de ningún convenio: se pagan mes a mes.
-          </span>
-        </div>
-      ) : null}
-
-      {/* ── Estado de cada obligación ───────────────────────────────────────── */}
-      <h2 className="mb-2 text-[12px] font-semibold">Compromisos vigentes</h2>
-      <div className="mb-6 overflow-x-auto">
-        <table className="tabla-flujo w-full min-w-[860px] text-[12px]">
-          <thead>
-            <tr>
-              <th className="px-2 py-1.5 text-left font-medium">Obligación</th>
-              <th className="px-2 py-1.5 text-left font-medium">Marco</th>
-              <th className="px-2 py-1.5 text-left font-medium">Activado</th>
-              <th className="px-2 py-1.5 text-right font-medium">Cuota</th>
-              <th className="px-2 py-1.5 text-right font-medium">Pagadas</th>
-              <th className="px-2 py-1.5 text-right font-medium">Pendientes</th>
-              <th className="px-2 py-1.5 text-left font-medium">Última cuota</th>
-              <th className="px-2 py-1.5 text-right font-medium">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {obligaciones.map((o) => (
-              <tr key={o.id}>
-                <td className="px-2 py-1.5">
-                  <span className="font-medium">
-                    {o.institucion} {o.numero}
-                  </span>
-                  <span className="ml-1.5 text-[10px] text-tenue">
-                    {ETIQUETA_TIPO[o.tipo] ?? o.tipo}
-                  </span>
-                </td>
-                <td className="px-2 py-1.5 text-tenue">{o.marco}</td>
-                <td className="cifra px-2 py-1.5 text-tenue">{o.fechaActivacion}</td>
-                <td className="cifra px-2 py-1.5 text-right">{clp(o.cuotaMensual)}</td>
-                <td className="cifra px-2 py-1.5 text-right text-tenue">{o.pagadas}</td>
-                <td className="cifra px-2 py-1.5 text-right">
-                  {o.pendientes}
-                  {o.porGenerar > 0 ? (
-                    <span className="ml-1 text-[10px] text-tenue">+{o.porGenerar} por generar</span>
-                  ) : null}
-                </td>
-                <td className="cifra px-2 py-1.5 text-tenue">
-                  {o.ultimoMes
-                    ? `${String(o.ultimoMes.mes).padStart(2, '0')}/${o.ultimoMes.anio}`
-                    : '—'}
-                </td>
-                <td className="cifra negativo px-2 py-1.5 text-right">{clp(o.saldo)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Calendario combinado ────────────────────────────────────────────── */}
-      <h2 className="mb-1 text-[12px] font-semibold">Calendario de cuotas</h2>
-      <p className="mb-2 text-[11px] text-tenue">
-        Lo que hay que pagar cada mes por deuda comprometida, sin contar cotizaciones ni
-        operación. Los meses en gris ya pasaron.
-      </p>
-      <div className="mb-6 overflow-x-auto">
-        <table className="tabla-flujo w-full min-w-[760px] text-[12px]">
-          <thead>
-            <tr>
-              <th className="col-fija px-2 py-1.5 text-left font-medium">Mes</th>
-              {obligaciones.map((o) => (
-                <th key={o.id} className="px-2 py-1.5 text-right font-medium">
-                  {o.numero}
-                </th>
-              ))}
-              <th className="px-2 py-1.5 text-right font-medium">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {calendario.map((c) => {
-              const esPeak = totales.peak !== null && c.total === totales.peak.monto
-              return (
-                <tr key={`${c.anio}-${c.mes}`} className={c.pasado ? 'text-tenue' : ''}>
-                  <td className={'col-fija px-2 py-1 ' + (c.pasado ? 'text-tenue' : '')}>
-                    {c.etiqueta}
-                  </td>
-                  {c.montos.map((m, i) => (
-                    <td key={i} className="cifra px-2 py-1 text-right">
-                      {m === 0 ? <span className="text-linea-fuerte">·</span> : clp(m)}
-                    </td>
-                  ))}
-                  <td
-                    className={
-                      'cifra px-2 py-1 text-right font-medium ' +
-                      (esPeak && !c.pasado ? 'bg-realce' : '')
-                    }
-                  >
-                    {clp(c.total)}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Deuda con colaboradores ─────────────────────────────────────────── */}
-      {compromisos.length > 0 ? (
-        <>
-          <h2 className="mb-1 text-[12px] font-semibold">Deuda con colaboradores</h2>
-          <p className="mb-2 max-w-[80ch] text-[11px] text-tenue">
-            Deuda declarada, no calculada. Las planillas de los colaboradores son fuente
-            confiable de cuánto se facturó, no de qué quedó pagado: sus estados de pago
-            arrastran meses ya regularizados. Cada línea entra al flujo como salida del mes en
-            que se espera pagarla.
-          </p>
-          <div className="mb-6 overflow-x-auto">
-            <table className="tabla-flujo w-full min-w-[560px] text-[12px]">
+        {/* ── Compromisos vigentes ─────────────────────────────────────────── */}
+        <Tarjeta titulo="Compromisos vigentes" icono={Landmark}>
+          <div className="-mx-4 overflow-x-auto">
+            <table className="tabla tabla-interactiva min-w-[820px]">
               <thead>
                 <tr>
-                  <th className="px-2 py-1.5 text-left font-medium">Colaborador</th>
-                  <th className="px-2 py-1.5 text-left font-medium">Concepto</th>
-                  <th className="px-2 py-1.5 text-right font-medium">USD</th>
-                  <th className="px-2 py-1.5 text-right font-medium">CLP</th>
-                  <th className="px-2 py-1.5 text-left font-medium">Sale en</th>
+                  <th>Obligación</th>
+                  <th>Marco</th>
+                  <th>Activado</th>
+                  <th className="!text-right">Cuota</th>
+                  <th className="!text-right">Pagadas</th>
+                  <th className="!text-right">Pendientes</th>
+                  <th>Última</th>
+                  <th className="!text-right">Saldo</th>
                 </tr>
               </thead>
               <tbody>
-                {compromisos.map((c, i) => (
-                  <tr key={i}>
-                    <td className="px-2 py-1 font-medium">{c.colaborador}</td>
-                    <td className="px-2 py-1 text-tenue">{c.descripcion}</td>
-                    <td className="cifra px-2 py-1 text-right">
-                      {c.usd === null ? '—' : c.usd.toLocaleString('es-CL')}
+                {obligaciones.map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <span className="font-medium">
+                        {o.institucion} {o.numero}
+                      </span>
+                      <span className="ml-2 text-[11px] text-suave">
+                        {ETIQUETA_TIPO[o.tipo] ?? o.tipo}
+                      </span>
                     </td>
-                    <td className="cifra negativo px-2 py-1 text-right">{clp(c.montoCLP)}</td>
-                    <td className="cifra px-2 py-1 text-tenue">
-                      {String(c.mes).padStart(2, '0')}/{c.anio}
+                    <td className="text-tenue">{o.marco}</td>
+                    <td className="cifra text-tenue">{o.fechaActivacion}</td>
+                    <td className="monto">{clp(o.cuotaMensual)}</td>
+                    <td className="monto text-tenue">{o.pagadas}</td>
+                    <td className="monto">
+                      {o.pendientes}
+                      {o.porGenerar > 0 ? (
+                        <span className="ml-1.5 text-[11px] font-normal text-suave">
+                          +{o.porGenerar} por generar
+                        </span>
+                      ) : null}
                     </td>
+                    <td className="cifra text-tenue">
+                      {o.ultimoMes
+                        ? `${String(o.ultimoMes.mes).padStart(2, '0')}/${o.ultimoMes.anio}`
+                        : '—'}
+                    </td>
+                    <td className="monto font-medium text-negativo">{clp(o.saldo)}</td>
                   </tr>
                 ))}
-                <tr className="fila-subtotal bg-panel font-medium">
-                  <td className="px-2 py-1" colSpan={3}>
-                    Total comprometido
-                  </td>
-                  <td className="cifra negativo px-2 py-1 text-right">{clp(totalCompromisos)}</td>
-                  <td />
-                </tr>
               </tbody>
             </table>
           </div>
-        </>
-      ) : null}
+        </Tarjeta>
 
-      {/* ── Cotizaciones ────────────────────────────────────────────────────── */}
-      <h2 className="mb-1 text-[12px] font-semibold">Cotizaciones previsionales</h2>
-      <p className="mb-2 text-[11px] text-tenue">
-        El período es el mes que se cotiza, no el mes en que se paga. Vencen el 13 del mes
-        siguiente. <span className="font-medium">Banco</span> es lo que salió de la cuenta y{' '}
-        <span className="font-medium">certificado</span> lo que Previred certifica por Felipe
-        Molina; la diferencia es lo cotizado por el resto.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="tabla-flujo w-full min-w-[720px] text-[12px]">
-          <thead>
-            <tr>
-              <th className="px-2 py-1.5 text-left font-medium">Período</th>
-              <th className="px-2 py-1.5 text-right font-medium">Banco</th>
-              <th className="px-2 py-1.5 text-right font-medium">Certificado</th>
-              <th className="px-2 py-1.5 text-right font-medium">Resto</th>
-              <th className="px-2 py-1.5 text-left font-medium">Estado</th>
-              <th className="px-2 py-1.5 text-left font-medium">Pagada el</th>
-              <th className="px-2 py-1.5 text-right font-medium">Atraso</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cotizaciones.map((c) => {
-              const alerta = c.estado === 'atrasada'
-              return (
-                <tr key={`${c.anio}-${c.mes}`} className={alerta ? 'bg-negativo/5' : ''}>
-                  <td className="px-2 py-1">{c.etiqueta}</td>
-                  <td className="cifra px-2 py-1 text-right">{clp(c.monto)}</td>
-                  <td className="cifra px-2 py-1 text-right text-tenue">
-                    {c.montoCertificado > 0 ? clp(c.montoCertificado) : '—'}
-                  </td>
-                  <td className="cifra px-2 py-1 text-right text-tenue">
-                    {c.resto > 0 ? clp(c.resto) : '—'}
-                  </td>
-                  <td className={'px-2 py-1 ' + (alerta ? 'negativo font-medium' : '')}>
-                    {c.estado === 'pagada'
-                      ? 'Pagada'
-                      : c.estado === 'atrasada'
-                        ? 'Atrasada'
-                        : 'Pendiente'}
-                    {c.estado === 'pendiente' && c.fechaVencimiento ? (
-                      <span className="ml-1 text-[10px] text-tenue">
-                        vence {c.fechaVencimiento}
-                      </span>
-                    ) : null}
-                  </td>
-                  <td className="cifra px-2 py-1 text-tenue">{c.fechaPago ?? '—'}</td>
-                  <td className="cifra px-2 py-1 text-right">
-                    {c.diasDeAtraso === null ? (
-                      <span className="text-linea-fuerte">·</span>
-                    ) : c.diasDeAtraso === 0 ? (
-                      <span className="text-tenue">al día</span>
-                    ) : (
-                      <span className={c.diasDeAtraso >= 60 ? 'negativo' : ''}>
-                        {c.diasDeAtraso} d
-                      </span>
-                    )}
-                  </td>
+        {/* ── Calendario ───────────────────────────────────────────────────── */}
+        <Tarjeta
+          titulo="Calendario de cuotas"
+          icono={CalendarDays}
+          bajada="Lo que hay que pagar cada mes por deuda comprometida, sin contar cotizaciones ni operación. Los meses en gris ya pasaron."
+        >
+          <div className="-mx-4 overflow-x-auto">
+            <table className="tabla min-w-[720px]">
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  {obligaciones.map((o) => (
+                    <th key={o.id} className="!text-right">
+                      {o.numero}
+                    </th>
+                  ))}
+                  <th className="!text-right">Total</th>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {calendario.map((c) => {
+                  const esPeak = totales.peak !== null && c.total === totales.peak.monto
+                  return (
+                    <tr key={`${c.anio}-${c.mes}`} className={c.pasado ? 'text-suave' : ''}>
+                      <td className={c.pasado ? 'text-suave' : ''}>{c.etiqueta}</td>
+                      {c.montos.map((m, i) => (
+                        <td key={i} className="monto">
+                          {m === 0 ? <span className="text-linea-fuerte">·</span> : clp(m)}
+                        </td>
+                      ))}
+                      <td
+                        className={
+                          'monto font-medium ' + (esPeak && !c.pasado ? 'text-alerta' : '')
+                        }
+                      >
+                        {clp(c.total)}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Tarjeta>
+
+        {/* ── Deuda con colaboradores ──────────────────────────────────────── */}
+        {compromisos.length > 0 ? (
+          <Tarjeta
+            titulo="Deuda con colaboradores"
+            icono={Users}
+            bajada="Deuda declarada, no calculada. Las planillas son fuente confiable de cuánto se facturó, no de qué quedó pagado: sus estados de pago arrastran meses ya regularizados."
+          >
+            <div className="-mx-4 overflow-x-auto">
+              <table className="tabla min-w-[560px]">
+                <thead>
+                  <tr>
+                    <th>Colaborador</th>
+                    <th>Concepto</th>
+                    <th className="!text-right">USD</th>
+                    <th className="!text-right">CLP</th>
+                    <th>Sale en</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {compromisos.map((c, i) => (
+                    <tr key={i}>
+                      <td className="font-medium">{c.colaborador}</td>
+                      <td className="text-tenue">{c.descripcion}</td>
+                      <td className="monto">
+                        {c.usd === null ? '—' : c.usd.toLocaleString('es-CL')}
+                      </td>
+                      <td className="monto text-negativo">{clp(c.montoCLP)}</td>
+                      <td className="cifra text-tenue">
+                        {String(c.mes).padStart(2, '0')}/{c.anio}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="font-medium">
+                    <td colSpan={3}>Total comprometido</td>
+                    <td className="monto text-negativo">{clp(totalCompromisos)}</td>
+                    <td />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </Tarjeta>
+        ) : null}
+
+        {/* ── Cotizaciones ─────────────────────────────────────────────────── */}
+        <Tarjeta
+          titulo="Cotizaciones previsionales"
+          icono={cotizacionesAtrasadas > 0 ? AlertTriangle : CheckCircle2}
+          tono={cotizacionesAtrasadas > 0 ? 'negativo' : 'neutro'}
+          bajada="El período es el mes que se cotiza, no el mes en que se paga. Vencen el 13 del mes siguiente. Banco es lo que salió de la cuenta y certificado lo que Previred certifica por Felipe Molina."
+          pie={
+            cotizaciones.some((c) => c.nota !== '')
+              ? 'De enero a octubre de 2025 no hay cartola cargada, así que ahí la columna Banco muestra lo certificado y no el cargo real, que además incluía a Cristián Andrés.'
+              : undefined
+          }
+        >
+          {cotizaciones.length === 0 ? (
+            <Vacio
+              icono={CalendarDays}
+              tono="alerta"
+              titulo="Sin cotizaciones cargadas"
+              detalle="Corre el cargador de obligaciones para traerlas desde el certificado de Previred."
+            />
+          ) : (
+            <div className="-mx-4 overflow-x-auto">
+              <table className="tabla min-w-[700px]">
+                <thead>
+                  <tr>
+                    <th>Período</th>
+                    <th className="!text-right">Banco</th>
+                    <th className="!text-right">Certificado</th>
+                    <th className="!text-right">Resto</th>
+                    <th>Estado</th>
+                    <th>Pagada el</th>
+                    <th className="!text-right">Atraso</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cotizaciones.map((c) => (
+                    <tr key={`${c.anio}-${c.mes}`}>
+                      <td>{c.etiqueta}</td>
+                      <td className="monto">{clp(c.monto)}</td>
+                      <td className="monto text-tenue">
+                        {c.montoCertificado > 0 ? clp(c.montoCertificado) : '—'}
+                      </td>
+                      <td className="monto text-tenue">{c.resto > 0 ? clp(c.resto) : '—'}</td>
+                      <td>
+                        {c.estado === 'pagada' ? (
+                          <Marca tono="positivo">Pagada</Marca>
+                        ) : c.estado === 'atrasada' ? (
+                          <Marca tono="negativo">Atrasada</Marca>
+                        ) : (
+                          <Marca tono="alerta">
+                            Pendiente{c.fechaVencimiento ? ` · vence ${c.fechaVencimiento}` : ''}
+                          </Marca>
+                        )}
+                      </td>
+                      <td className="cifra text-tenue">{c.fechaPago ?? '—'}</td>
+                      <td className="monto">
+                        {c.diasDeAtraso === null ? (
+                          <span className="text-linea-fuerte">·</span>
+                        ) : c.diasDeAtraso === 0 ? (
+                          <span className="text-[11px] text-positivo">al día</span>
+                        ) : (
+                          <span className={c.diasDeAtraso >= 60 ? 'text-negativo' : 'text-tenue'}>
+                            {c.diasDeAtraso} d
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Tarjeta>
       </div>
-      {cotizaciones.some((c) => c.nota !== '') ? (
-        <p className="mt-2 max-w-[70ch] text-[11px] text-tenue">
-          De enero a octubre de 2025 no hay cartola cargada, así que ahí la columna{' '}
-          <span className="font-medium">Banco</span> muestra lo certificado y no el cargo real,
-          que además incluía a Cristián Andrés.
-        </p>
-      ) : null}
-    </div>
+    </Pagina>
   )
 }
