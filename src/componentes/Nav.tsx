@@ -6,9 +6,10 @@ import {
   Banknote,
   Building2,
   FileSpreadsheet,
-  Home,
+  LayoutDashboard,
   Landmark,
   ListFilter,
+  LogOut,
   Receipt,
   ScrollText,
   Upload,
@@ -16,16 +17,52 @@ import {
 } from 'lucide-react'
 import { ANIO_ACTIVO } from '@/lib/dominio'
 
-const ENLACES: { href: string; etiqueta: string; icono: LucideIcon }[] = [
-  { href: '/', etiqueta: 'Inicio', icono: Home },
-  { href: '/flujo', etiqueta: 'Flujo', icono: FileSpreadsheet },
-  { href: '/movimientos', etiqueta: 'Movimientos', icono: ListFilter },
-  { href: '/ventas', etiqueta: 'Ventas', icono: Receipt },
-  { href: '/banco', etiqueta: 'Banco', icono: Banknote },
-  { href: '/obligaciones', etiqueta: 'Obligaciones', icono: Landmark },
-  { href: '/proveedores', etiqueta: 'Proveedores', icono: Building2 },
-  { href: '/reglas', etiqueta: 'Reglas', icono: ScrollText },
-  { href: '/cargar', etiqueta: 'Cargar', icono: Upload },
+/**
+ * Barra lateral.
+ *
+ * Nueve secciones en una fila horizontal no se pueden escanear: hay que leerlas
+ * todas para encontrar una. Agrupadas en tres bloques con encabezado, la lectura
+ * baja a elegir un grupo y después un ítem.
+ *
+ * Los grupos responden a la frecuencia de uso, no a la arquitectura interna:
+ * el día a día arriba, los registros que se consultan en medio, y lo que se toca
+ * una vez al mes abajo.
+ */
+
+interface Enlace {
+  href: string
+  etiqueta: string
+  icono: LucideIcon
+}
+
+const GRUPOS: { titulo: string | null; enlaces: Enlace[] }[] = [
+  {
+    titulo: null,
+    enlaces: [{ href: '/', etiqueta: 'Resumen', icono: LayoutDashboard }],
+  },
+  {
+    titulo: 'Día a día',
+    enlaces: [
+      { href: '/flujo', etiqueta: 'Flujo de caja', icono: FileSpreadsheet },
+      { href: '/movimientos', etiqueta: 'Movimientos', icono: ListFilter },
+      { href: '/banco', etiqueta: 'Banco', icono: Banknote },
+    ],
+  },
+  {
+    titulo: 'Registros',
+    enlaces: [
+      { href: '/ventas', etiqueta: 'Ventas', icono: Receipt },
+      { href: '/obligaciones', etiqueta: 'Obligaciones', icono: Landmark },
+      { href: '/proveedores', etiqueta: 'Proveedores', icono: Building2 },
+    ],
+  },
+  {
+    titulo: 'Mantención',
+    enlaces: [
+      { href: '/reglas', etiqueta: 'Reglas', icono: ScrollText },
+      { href: '/cargar', etiqueta: 'Cargar archivos', icono: Upload },
+    ],
+  },
 ]
 
 interface Props {
@@ -38,52 +75,63 @@ export function Nav({ email, salir }: Props) {
   // Fuera del router de Next devuelve null: la barra igual tiene que renderizar.
   const ruta = usePathname() ?? ''
 
-  return (
-    <header className="sticky top-0 z-10 border-b border-linea bg-superficie/85 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center gap-6 px-5 py-2">
-        <Link href="/" className="flex items-baseline gap-2">
-          <span className="text-[13px] font-semibold tracking-[-0.01em]">Caja WP</span>
-          <span className="text-[11px] text-suave">{ANIO_ACTIVO}</span>
-        </Link>
+  if (!email) return null
 
-        {email ? (
-          <>
-            <nav className="flex items-center gap-0.5 overflow-x-auto">
-              {ENLACES.map(({ href, etiqueta, icono: Icono }) => {
+  return (
+    <aside className="barra-lateral flex flex-col lg:sticky lg:top-0 lg:h-screen">
+      <div className="px-e4 pt-e5 pb-e4">
+        <Link href="/" className="block">
+          <div className="t-tarjeta">Caja WP</div>
+          <div className="t-apoyo mt-0.5">Japybrand WP · {ANIO_ACTIVO}</div>
+        </Link>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-e2 pb-e4">
+        {GRUPOS.map((grupo, i) => (
+          <div key={i} className={grupo.titulo ? 'mt-e4' : ''}>
+            {grupo.titulo ? <div className="t-zona px-e2 pb-e2">{grupo.titulo}</div> : null}
+            <ul className="space-y-px">
+              {grupo.enlaces.map(({ href, etiqueta, icono: Icono }) => {
                 const activo = href === '/' ? ruta === '/' : ruta.startsWith(href)
                 return (
-                  <Link
-                    key={href}
-                    href={href}
-                    aria-current={activo ? 'page' : undefined}
-                    className={
-                      'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] whitespace-nowrap transition-colors ' +
-                      (activo
-                        ? 'bg-panel font-medium text-tinta'
-                        : 'text-tenue hover:bg-panel hover:text-tinta')
-                    }
-                  >
-                    <Icono size={14} strokeWidth={2} className={activo ? '' : 'text-suave'} />
-                    {etiqueta}
-                  </Link>
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      aria-current={activo ? 'page' : undefined}
+                      className={
+                        'flex items-center gap-e2 rounded-[8px] px-e2 py-1.5 text-[12.5px] transition-colors ' +
+                        (activo
+                          ? 'bg-panel font-medium text-tinta'
+                          : 'text-tenue hover:bg-panel/60 hover:text-tinta')
+                      }
+                    >
+                      <Icono
+                        size={15}
+                        strokeWidth={1.75}
+                        className={activo ? 'text-tinta' : 'text-suave'}
+                      />
+                      {etiqueta}
+                    </Link>
+                  </li>
                 )
               })}
-            </nav>
+            </ul>
+          </div>
+        ))}
+      </nav>
 
-            <div className="ml-auto flex items-center gap-3">
-              <span className="hidden text-[11px] text-suave lg:inline">{email}</span>
-              <form action={salir}>
-                <button
-                  type="submit"
-                  className="rounded-md px-2 py-1 text-[11px] text-tenue transition-colors hover:bg-panel hover:text-tinta"
-                >
-                  Salir
-                </button>
-              </form>
-            </div>
-          </>
-        ) : null}
+      <div className="border-t border-linea px-e4 py-e3">
+        <div className="t-apoyo truncate">{email}</div>
+        <form action={salir}>
+          <button
+            type="submit"
+            className="mt-1 flex items-center gap-1.5 text-[11.5px] text-tenue transition-colors hover:text-tinta"
+          >
+            <LogOut size={13} strokeWidth={1.75} />
+            Cerrar sesión
+          </button>
+        </form>
       </div>
-    </header>
+    </aside>
   )
 }

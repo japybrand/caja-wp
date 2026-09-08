@@ -7,41 +7,61 @@ import {
   CheckCircle2,
   Landmark,
   PieChart,
-  Scale,
-  Wallet,
 } from 'lucide-react'
 import type { Panel, Vencimiento } from '@/lib/panel'
 import { DIAS_VENTANA } from '@/lib/panel'
-import { Accion, Marca, Pagina, Tarjeta, Titular, Vacio, clp, fechaEnPalabras } from '@/componentes/ui'
+import {
+  Accion,
+  Barra,
+  Cifra,
+  Marca,
+  Pagina,
+  Tarjeta,
+  Vacio,
+  Zona,
+  clp,
+  fechaEnPalabras,
+  nombreMes as nombreDelMes,
+} from '@/componentes/ui'
 import { Grafico } from './Grafico'
 
 /**
  * Panel de inicio.
  *
- * Siete preguntas en lenguaje normal, cada una con el número grande, una frase que
- * lo explica y, si hay que hacer algo, un verbo con fecha.
+ * La composición responde el orden en que hay que mirar, no el orden contable:
  *
- * Los íconos identifican el bloque, no lo decoran: uno por tarjeta, del mismo
- * tamaño, y en gris salvo cuando el bloque exige una decisión. El color aparece
- * solo en lo atrasado y en la plata que falta — si todo estuviera al día, el panel
- * no tendría un solo color.
+ *  1. EL ESTADO DE LA CAJA, en la superficie de tinta. Domina por contraste, no por
+ *     tamaño de fuente, y es lo único que usa el paso `t-display`.
+ *  2. LO URGENTE, sobre papel cálido. Separado del resto para que se lea como una
+ *     zona de acción y no como un dato más.
+ *  3. EL PANORAMA, en tarjetas blancas de igual peso entre sí.
+ *  4. EL DETALLE, sin tarjeta, sobre el fondo. Queda subordinado por ausencia de
+ *     superficie, que es más claro que hacerlo chico.
+ *
+ * Antes eran siete tarjetas idénticas apiladas y todo llegaba junto.
  */
 
-function ListaVencimientos({ items }: { items: Vencimiento[] }) {
+function ListaVencimientos({
+  items,
+  inverso = false,
+}: {
+  items: Vencimiento[]
+  inverso?: boolean
+}) {
   return (
     <table className="tabla">
       <tbody>
         {items.map((v, i) => (
           <tr key={i}>
-            <td className="!px-0">{v.concepto}</td>
-            <td className="monto !px-0 font-medium">{clp(v.monto)}</td>
-            <td className="!pr-0 !pl-4 text-right">
+            <td className="!pl-0">{v.concepto}</td>
+            <td className="monto font-medium">{clp(v.monto)}</td>
+            <td className="!pr-0 text-right">
               {v.vencido ? (
-                <Marca tono="negativo">
+                <Marca tono="negativo" inverso={inverso}>
                   {Math.abs(v.dias) === 0 ? 'vencía hoy' : `hace ${Math.abs(v.dias)} días`}
                 </Marca>
               ) : (
-                <span className="text-[11px] text-tenue">
+                <span className="t-apoyo">
                   {v.accion} antes del {fechaEnPalabras(v.fecha).split(' de ')[0]}
                 </span>
               )}
@@ -83,6 +103,8 @@ export function PanelInicio({ panel }: { panel: Panel }) {
   const alcanza = falta === 0
   const mes = nombreMes.toLowerCase()
   const mayorCosto = Math.max(...costos.map((c) => c.monto), 1)
+  /** Qué parte de lo que vence alcanzas a cubrir con lo que hay. */
+  const cobertura = totalProximos === 0 ? 100 : (saldoHoy / totalProximos) * 100
 
   return (
     <Pagina
@@ -94,97 +116,115 @@ export function PanelInicio({ panel }: { panel: Panel }) {
         </Link>
       }
     >
-      <div className="grid gap-3">
-        {/* 1 ─ Plata ─────────────────────────────────────────────────────── */}
-        <Tarjeta titulo="¿Cuánta plata tengo?" icono={Wallet}>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Titular
-              valor={clp(saldoHoy)}
-              tono={saldoHoy < 0 ? 'negativo' : 'neutro'}
-              explica="en la cuenta corriente hoy"
-            />
-            <Titular
-              valor={clp(Math.abs(brechaDelMes))}
-              tono={brechaDelMes < 0 ? 'negativo' : 'neutro'}
-              explica={
-                brechaDelMes < 0
-                  ? `es lo que te falta si pagas todo lo de ${mes}`
-                  : `es lo que te quedaría al cerrar ${mes}`
-              }
-            />
+      {/* ═══ 1. El estado de la caja ══════════════════════════════════════ */}
+      <Tarjeta variante="principal">
+        <div className="grid gap-e5 lg:grid-cols-[1.1fr_1fr_1fr] lg:gap-e6">
+          <Cifra
+            rotulo="Tienes hoy"
+            valor={clp(saldoHoy)}
+            tamano="principal"
+            inverso
+            tono={saldoHoy < 0 ? 'negativo' : 'neutro'}
+            explica="en la cuenta corriente"
+          />
+          <Cifra
+            rotulo={`Para cerrar ${mes}`}
+            valor={clp(Math.abs(brechaDelMes))}
+            inverso
+            tono={brechaDelMes < 0 ? 'negativo' : 'positivo'}
+            explica={
+              brechaDelMes < 0
+                ? `te falta esto si pagas todo lo del mes`
+                : `te quedaría esto al cerrar el mes`
+            }
+          />
+          <Cifra
+            rotulo={`Vence en ${DIAS_VENTANA} días`}
+            valor={clp(totalProximos)}
+            inverso
+            explica={
+              alcanza
+                ? 'lo cubres con lo que tienes'
+                : `te faltan ${clp(falta)} para cubrirlo`
+            }
+            tono={alcanza ? 'positivo' : 'negativo'}
+          />
+        </div>
+
+        <div className="mt-e5 border-t border-acento-linea pt-e4">
+          <div className="mb-e2 flex items-baseline justify-between">
+            <span className="t-rotulo text-claro-suave">Cobertura de lo que viene</span>
+            <span className="cifra text-[12px] text-claro-tenue">
+              {Math.round(Math.min(cobertura, 999))}%
+            </span>
           </div>
+          <Barra porcentaje={cobertura} inverso />
           {mesAMedias ? (
-            <p className="mt-4 border-t border-linea pt-3 text-[12px] text-tenue">
-              El cálculo es conservador: el registro de ventas de {mes} todavía está a medias, así
-              que lo que falta cobrar aparece más bajo de lo que será.
+            <p className="t-apoyo mt-e3 text-claro-tenue">
+              El cálculo es conservador: el registro de ventas de {mes} está a medias, así que lo
+              que falta cobrar aparece más bajo de lo que será.
             </p>
           ) : null}
-        </Tarjeta>
+        </div>
+      </Tarjeta>
 
-        {/* 2 ─ Atrasos ───────────────────────────────────────────────────── */}
-        {atrasados.length > 0 ? (
-          <Tarjeta
-            titulo={atrasados.length === 1 ? '1 pago atrasado' : `${atrasados.length} pagos atrasados`}
-            icono={AlertTriangle}
-            tono="negativo"
-          >
-            <Titular
-              valor={clp(totalAtrasado)}
+      {/* ═══ 2. Lo urgente ════════════════════════════════════════════════ */}
+      <Zona
+        titulo="Requiere acción"
+        nota={
+          atrasados.length > 0
+            ? `${atrasados.length} ${atrasados.length === 1 ? 'pago atrasado' : 'pagos atrasados'}`
+            : 'nada atrasado'
+        }
+      >
+        <div className="grid gap-e3 lg:grid-cols-[1fr_1fr]">
+          {atrasados.length > 0 ? (
+            <Tarjeta
+              variante="urgente"
+              titulo="Atrasado"
+              icono={AlertTriangle}
               tono="negativo"
-              explica="deberías haber pagado esto y todavía no está pagado"
-            />
-            <div className="mt-3 border-t border-linea pt-1">
-              <ListaVencimientos items={atrasados} />
-            </div>
-            <Accion icono={AlertTriangle} tono="negativo">
-              Págalos cuanto antes: las cotizaciones acumulan multa e interés.
-            </Accion>
-          </Tarjeta>
-        ) : (
-          <Tarjeta titulo="¿Hay algo atrasado?" icono={CheckCircle2} tono="positivo">
-            <Vacio
-              icono={CheckCircle2}
-              tono="positivo"
-              titulo="Nada atrasado"
-              detalle="Estás al día con todo lo que ya venció."
-            />
-          </Tarjeta>
-        )}
+            >
+              <Cifra
+                valor={clp(totalAtrasado)}
+                tono="negativo"
+                explica="deberías haber pagado esto y todavía no está pagado"
+              />
+              <div className="mt-e3 border-t border-urgente-linea pt-e2">
+                <ListaVencimientos items={atrasados} />
+              </div>
+              <Accion icono={AlertTriangle} tono="negativo">
+                Págalos cuanto antes: las cotizaciones acumulan multa e interés.
+              </Accion>
+            </Tarjeta>
+          ) : (
+            <Tarjeta variante="urgente" titulo="Al día" icono={CheckCircle2} tono="positivo">
+              <Vacio
+                icono={CheckCircle2}
+                tono="positivo"
+                titulo="Nada atrasado"
+                detalle="Estás al día con todo lo que ya venció."
+              />
+            </Tarjeta>
+          )}
 
-        {/* 3 y 4 ─ Lo que viene y si alcanza ─────────────────────────────── */}
-        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
           <Tarjeta
-            titulo={`Qué pagar antes del ${fechaEnPalabras(hasta)}`}
+            variante="urgente"
+            titulo={`Vence antes del ${fechaEnPalabras(hasta)}`}
             icono={CalendarClock}
+            tono="alerta"
           >
-            <Titular
+            <Cifra
               valor={clp(totalProximos)}
-              explica={`todo lo que vence en los próximos ${DIAS_VENTANA} días, incluido lo atrasado`}
+              explica={`todo lo que vence en ${DIAS_VENTANA} días, incluido lo atrasado`}
             />
             {totalProximos > 0 ? (
-              <div className="mt-3 border-t border-linea pt-1">
+              <div className="mt-e3 border-t border-urgente-linea pt-e2">
                 <ListaVencimientos items={[...atrasados, ...proximos]} />
               </div>
             ) : (
               <Vacio icono={CheckCircle2} titulo="Nada vence en 15 días" />
             )}
-          </Tarjeta>
-
-          <Tarjeta
-            titulo="¿Te alcanza la plata?"
-            icono={Scale}
-            tono={alcanza ? 'positivo' : 'negativo'}
-          >
-            <Titular
-              valor={alcanza ? 'Sí, alcanza' : `Faltan ${clp(falta)}`}
-              tono={alcanza ? 'positivo' : 'negativo'}
-              explica={
-                <>
-                  Tienes {clp(saldoHoy)} y en {DIAS_VENTANA} días tienes que pagar{' '}
-                  {clp(totalProximos)}.
-                </>
-              }
-            />
             {alcanza ? null : (
               <Accion icono={ArrowRight} tono="negativo">
                 Cobra {clp(falta)} antes del {fechaEnPalabras(hasta)} para llegar.
@@ -192,112 +232,90 @@ export function PanelInicio({ panel }: { panel: Panel }) {
             )}
           </Tarjeta>
         </div>
+      </Zona>
 
-        {/* 5 ─ IVA ───────────────────────────────────────────────────────── */}
-        <Tarjeta titulo="Cuánto tienes que pagar de impuestos" icono={BadgePercent}>
-          {f29 ? (
-            <>
-              <Titular
-                valor={clp(f29.total)}
-                explica={`Formulario 29 del período ${fechaEnPalabras(`2026-${String(f29.mesPeriodo).padStart(2, '0')}-01`).split(' de ')[1]}, se paga antes del ${fechaEnPalabras(f29.venceEl)}`}
-              />
-              <table className="tabla mt-3 max-w-lg border-t border-linea">
-                <tbody>
-                  <tr>
-                    <td className="!pl-0">IVA</td>
-                    <td className="monto">{clp(f29.iva?.aPagar ?? 0)}</td>
-                    <td className="!pr-0 text-right text-[11px] text-suave">
-                      calculado del SII
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="!pl-0">PPM</td>
-                    <td className="monto">{f29.ppm > 0 ? clp(f29.ppm) : '—'}</td>
-                    <td className="!pr-0 text-right text-[11px] text-suave">
-                      pago provisional mensual
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="!pl-0">Retenciones de honorarios</td>
-                    <td className="monto">
-                      {f29.retencionesHonorarios > 0 ? clp(f29.retencionesHonorarios) : '—'}
-                    </td>
-                    <td className="!pr-0 text-right text-[11px] text-suave">boletas de terceros</td>
-                  </tr>
-                  <tr>
-                    <td className="!pl-0">Otros conceptos</td>
-                    <td className="monto">{f29.otros > 0 ? clp(f29.otros) : '—'}</td>
-                    <td className="!pr-0" />
-                  </tr>
-                  {f29.sinDesglosar > 0 ? (
-                    <tr className="text-alerta">
-                      <td className="!pl-0">Falta desglosar</td>
-                      <td className="monto">{clp(f29.sinDesglosar)}</td>
-                      <td className="!pr-0 text-right text-[11px]">del total del contador</td>
+      {/* ═══ 3. El panorama ═══════════════════════════════════════════════ */}
+      <Zona titulo="El panorama del mes">
+        <div className="grid gap-e3 lg:grid-cols-3">
+          <Tarjeta titulo="Impuestos" icono={BadgePercent}>
+            {f29 ? (
+              <>
+                <Cifra
+                  valor={clp(f29.total)}
+                  explica={`F29 de ${nombreDelMes(f29.mesPeriodo)}, antes del ${fechaEnPalabras(f29.venceEl)}`}
+                />
+                <table className="tabla mt-e3 border-t border-linea">
+                  <tbody>
+                    <tr>
+                      <td className="!pl-0">IVA</td>
+                      <td className="monto !pr-0">{clp(f29.iva?.aPagar ?? 0)}</td>
                     </tr>
-                  ) : null}
-                  <tr className="font-medium">
-                    <td className="!pl-0">Total del formulario</td>
-                    <td className="monto">{clp(f29.total)}</td>
-                    <td className="!pr-0" />
-                  </tr>
-                </tbody>
-              </table>
-              {f29.completo ? null : (
-                <Accion icono={AlertTriangle} tono="alerta">
-                  Este monto es solo el IVA: falta el resto del formulario. Cárgalo cuando tu
-                  contador te lo mande.
-                </Accion>
-              )}
-              {f29.sinDesglosar > 0 ? (
-                <Accion icono={AlertTriangle} tono="alerta">
-                  El total lo mandó tu contador, pero faltan {clp(f29.sinDesglosar)} por desglosar
-                  entre PPM, retenciones y otros.
-                </Accion>
-              ) : null}
-              {f29.iva && f29.iva.remanente > 0 ? (
-                <Accion icono={CheckCircle2} tono="positivo">
-                  Te quedan {clp(f29.iva.remanente)} de IVA a favor para el próximo mes.
-                </Accion>
-              ) : null}
-              {f29EnCurso ? (
-                <p className="mt-3 text-[12px] text-tenue">
-                  {nombreMes} va en {clp(f29EnCurso.total)}, pero el mes no ha terminado.
+                    <tr>
+                      <td className="!pl-0">PPM</td>
+                      <td className="monto !pr-0">
+                        {f29.ppm > 0 ? clp(f29.ppm) : <span className="text-linea-fuerte">·</span>}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="!pl-0">Retenciones</td>
+                      <td className="monto !pr-0">
+                        {f29.retencionesHonorarios > 0 ? (
+                          clp(f29.retencionesHonorarios)
+                        ) : (
+                          <span className="text-linea-fuerte">·</span>
+                        )}
+                      </td>
+                    </tr>
+                    {f29.sinDesglosar > 0 ? (
+                      <tr className="text-alerta">
+                        <td className="!pl-0">Falta desglosar</td>
+                        <td className="monto !pr-0">{clp(f29.sinDesglosar)}</td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+                <p className="t-apoyo mt-e3">
+                  El IVA sale del SII: {clp(f29.iva?.debito ?? 0)} que cobraste menos{' '}
+                  {clp(f29.iva?.credito ?? 0)} que te cobraron.
                 </p>
-              ) : null}
-            </>
-          ) : (
-            <Vacio
-              icono={BadgePercent}
-              tono="alerta"
-              titulo="Falta un registro del SII"
-              detalle="Sin el registro de compras y el de ventas del período anterior no se puede calcular el IVA."
-            />
-          )}
-        </Tarjeta>
+                {f29.completo ? null : (
+                  <Accion icono={AlertTriangle} tono="alerta">
+                    Es solo el IVA: falta el resto del formulario.
+                  </Accion>
+                )}
+                {f29EnCurso ? (
+                  <p className="t-apoyo mt-e2">
+                    {nombreMes} va en {clp(f29EnCurso.total)}, sin cerrar.
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <Vacio
+                icono={BadgePercent}
+                tono="alerta"
+                titulo="Falta un registro"
+                detalle="Sin compras y ventas del período no se puede calcular."
+              />
+            )}
+          </Tarjeta>
 
-        {/* 6 y 7 ─ Costos y deuda ────────────────────────────────────────── */}
-        <div className="grid gap-3 lg:grid-cols-2">
-          <Tarjeta titulo={`Qué te cuesta más en ${mes}`} icono={PieChart}>
-            <table className="tabla">
-              <tbody>
-                {costos.map((c) => (
-                  <tr key={c.concepto}>
-                    <td className="!pl-0 whitespace-nowrap">{c.concepto}</td>
-                    <td className="w-full">
-                      <div
-                        className="h-1.5 rounded-full bg-linea-fuerte"
-                        style={{ width: `${Math.max((c.monto / mayorCosto) * 100, 3)}%` }}
-                      />
-                    </td>
-                    <td className="monto">{clp(c.monto)}</td>
-                    <td className="monto !pr-0 w-11 text-suave">{c.porcentaje.toFixed(0)}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-3 text-[12px] text-tenue">
-              Total de {mes}: <span className="cifra">{clp(totalCostos)}</span>.{' '}
+          <Tarjeta titulo={`Qué te cuesta más`} icono={PieChart}>
+            <Cifra valor={clp(totalCostos)} explica={`sale en ${mes}`} />
+            <div className="mt-e4 space-y-e3">
+              {costos.map((c) => (
+                <div key={c.concepto}>
+                  <div className="mb-1 flex items-baseline justify-between gap-e2">
+                    <span className="text-[12px]">{c.concepto}</span>
+                    <span className="cifra text-[12px] whitespace-nowrap">
+                      {clp(c.monto)}
+                      <span className="ml-1.5 text-suave">{c.porcentaje.toFixed(0)}%</span>
+                    </span>
+                  </div>
+                  <Barra porcentaje={(c.monto / mayorCosto) * 100} />
+                </div>
+              ))}
+            </div>
+            <p className="t-apoyo mt-e4">
               {costos[0]?.concepto === 'Deudas y convenios'
                 ? 'Lo que más pesa es la deuda, no la operación.'
                 : `Lo que más pesa es ${costos[0]?.concepto.toLowerCase()}.`}
@@ -312,123 +330,116 @@ export function PanelInicio({ panel }: { panel: Panel }) {
                 href="/obligaciones"
                 className="flex items-center gap-1 text-acento hover:underline"
               >
-                Ver el detalle en Obligaciones <ArrowRight size={13} strokeWidth={2} />
+                Ver el detalle <ArrowRight size={13} strokeWidth={2} />
               </Link>
             }
           >
-            <Titular
-              valor={clp(totalDeuda)}
-              explica="en total, sumando convenios, crédito y colaboradores"
-            />
-            <table className="tabla mt-3 border-t border-linea">
+            <Cifra valor={clp(totalDeuda)} explica="convenios, crédito y colaboradores" />
+            <table className="tabla mt-e3 border-t border-linea">
               <tbody>
                 {deudas.map((d, i) => (
                   <tr key={i}>
-                    <td className="!pl-0">{d.quien}</td>
-                    <td className={'monto ' + (d.atrasado ? 'text-negativo' : '')}>
-                      {clp(d.monto)}
+                    <td className="!pl-0">
+                      <div>{d.quien}</div>
+                      <div className="t-apoyo">{d.detalle}</div>
                     </td>
-                    <td className="!pr-0 text-right">
-                      {d.atrasado ? (
-                        <Marca tono="negativo">{d.detalle}</Marca>
-                      ) : (
-                        <span className="text-[11px] text-suave">{d.detalle}</span>
-                      )}
+                    <td className={'monto !pr-0 ' + (d.atrasado ? 'text-negativo' : '')}>
+                      {clp(d.monto)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <p className="mt-3 text-[12px] text-tenue">
-              Cada mes se van <span className="cifra">{clp(cuotaFijaMensual)}</span> solo en cuotas,
-              pase lo que pase.
+            <p className="t-apoyo mt-e3">
+              Cada mes se van {clp(cuotaFijaMensual)} solo en cuotas.
             </p>
           </Tarjeta>
         </div>
-      </div>
+      </Zona>
 
-      {/* ── El detalle, abajo ────────────────────────────────────────────── */}
-      <div className="mt-8 mb-3 flex items-center gap-3">
-        <div className="h-px flex-1 bg-linea" />
-        <span className="rotulo">De aquí abajo, el detalle</span>
-        <div className="h-px flex-1 bg-linea" />
-      </div>
+      {/* ═══ 4. El detalle ════════════════════════════════════════════════ */}
+      <Zona titulo="El detalle" nota="para cuando quieras profundizar">
+        <div className="zona-detalle pt-e4">
+          <div className="mb-e2 flex items-baseline gap-e3">
+            <h3 className="t-tarjeta">Ingresos y egresos por mes</h3>
+          </div>
+          <p className="t-apoyo mb-e3 max-w-[70ch]">
+            La línea es el saldo acumulado del flujo, que mide la brecha entre lo comprometido y lo
+            que entró. No es el saldo de la cuenta.
+          </p>
+          <Grafico barras={barras} />
 
-      <Tarjeta
-        titulo="Ingresos y egresos por mes"
-        bajada="La línea es el saldo acumulado del flujo, que mide la brecha entre lo comprometido y lo que entró. No es el saldo de la cuenta."
-      >
-        <Grafico barras={barras} />
-      </Tarjeta>
-
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        {comparacion.length > 0 ? (
-          <Tarjeta titulo={`${nombreMes} contra el mes anterior`}>
-            <table className="tabla">
-              <thead>
-                <tr>
-                  <th className="!pl-0">Concepto</th>
-                  <th className="!text-right">Anterior</th>
-                  <th className="!text-right">Actual</th>
-                  <th className="!pr-0 !text-right">Var.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparacion.map((c) => {
-                  const empeora =
-                    c.variacion !== null && (c.masEsPeor ? c.variacion > 0 : c.variacion < 0)
-                  return (
-                    <tr key={c.concepto}>
-                      <td className="!pl-0">{c.concepto}</td>
-                      <td className="monto text-tenue">{clp(c.anterior)}</td>
-                      <td className="monto">{clp(c.actual)}</td>
-                      <td className={'monto !pr-0 ' + (empeora ? 'text-negativo' : 'text-tenue')}>
-                        {c.variacion === null
-                          ? '—'
-                          : `${c.variacion > 0 ? '+' : ''}${c.variacion.toFixed(0)}%`}
-                      </td>
+          <div className="mt-e5 grid gap-e5 lg:grid-cols-2">
+            {comparacion.length > 0 ? (
+              <div>
+                <h3 className="t-tarjeta mb-e2">{nombreMes} contra el mes anterior</h3>
+                <table className="tabla">
+                  <thead>
+                    <tr>
+                      <th className="!pl-0">Concepto</th>
+                      <th className="!text-right">Anterior</th>
+                      <th className="!text-right">Actual</th>
+                      <th className="!pr-0 !text-right">Var.</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </Tarjeta>
-        ) : null}
+                  </thead>
+                  <tbody>
+                    {comparacion.map((c) => {
+                      const empeora =
+                        c.variacion !== null && (c.masEsPeor ? c.variacion > 0 : c.variacion < 0)
+                      return (
+                        <tr key={c.concepto}>
+                          <td className="!pl-0">{c.concepto}</td>
+                          <td className="monto text-tenue">{clp(c.anterior)}</td>
+                          <td className="monto">{clp(c.actual)}</td>
+                          <td
+                            className={'monto !pr-0 ' + (empeora ? 'text-negativo' : 'text-tenue')}
+                          >
+                            {c.variacion === null
+                              ? '—'
+                              : `${c.variacion > 0 ? '+' : ''}${c.variacion.toFixed(0)}%`}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
 
-        <Tarjeta titulo="Meses que cierran en negativo">
-          {deficit.length === 0 ? (
-            <Vacio icono={CheckCircle2} tono="positivo" titulo="Ninguno cierra en negativo" />
-          ) : (
-            <table className="tabla">
-              <tbody>
-                {deficit.map((d) => (
-                  <tr key={d.mes}>
-                    <td className="!pl-0">{d.mes}</td>
-                    <td>
-                      <Marca tono={d.naturaleza === 'real' ? 'neutro' : 'alerta'}>
-                        {d.naturaleza === 'real'
-                          ? 'real'
-                          : d.naturaleza === 'incompleto'
-                            ? 'incompleto'
-                            : 'proyectado'}
-                      </Marca>
-                    </td>
-                    <td className="monto !pr-0 text-negativo">{clp(d.saldo)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </Tarjeta>
-      </div>
+            <div>
+              <h3 className="t-tarjeta mb-e2">Meses que cierran en negativo</h3>
+              {deficit.length === 0 ? (
+                <Vacio icono={CheckCircle2} tono="positivo" titulo="Ninguno" />
+              ) : (
+                <table className="tabla">
+                  <tbody>
+                    {deficit.map((d) => (
+                      <tr key={d.mes}>
+                        <td className="!pl-0">{d.mes}</td>
+                        <td>
+                          <Marca tono={d.naturaleza === 'real' ? 'neutro' : 'alerta'}>
+                            {d.naturaleza === 'real'
+                              ? 'real'
+                              : d.naturaleza === 'incompleto'
+                                ? 'incompleto'
+                                : 'proyectado'}
+                          </Marca>
+                        </td>
+                        <td className="monto !pr-0 text-negativo">{clp(d.saldo)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      </Zona>
 
       {porRevisar > 0 || sinConciliar > 0 ? (
-        <p className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-[12px]">
+        <p className="mt-e5 flex flex-wrap gap-x-e5 gap-y-1 text-[12px]">
           {porRevisar > 0 ? (
-            <Link
-              href="/movimientos"
-              className="flex items-center gap-1 text-alerta hover:underline"
-            >
+            <Link href="/movimientos" className="flex items-center gap-1 text-alerta hover:underline">
               <AlertTriangle size={13} strokeWidth={2} />
               Revisa {porRevisar} movimientos
             </Link>

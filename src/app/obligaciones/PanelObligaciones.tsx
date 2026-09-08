@@ -1,6 +1,6 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Landmark, Users } from 'lucide-react'
 import type { EstadoObligaciones } from '@/lib/obligaciones'
-import { Marca, Pagina, Tarjeta, Titular, Vacio, clp } from '@/componentes/ui'
+import { Cifra, Marca, Pagina, Tarjeta, Vacio, clp } from '@/componentes/ui'
 import { TablaF29 } from './TablaF29'
 
 const ETIQUETA_TIPO: Record<string, string> = {

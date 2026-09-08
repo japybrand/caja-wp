@@ -3,44 +3,74 @@
 /*
  * Sistema de diseño.
  *
- * La regla que ordena todo: el color comunica estado y nada más. Las superficies,
- * los bordes y el texto viven en una escala de grises; el rojo, el ámbar y el azul
- * solo aparecen cuando hay algo que decidir. Una pantalla donde todo está en orden
- * no tiene un solo color.
+ * Dos escalas y cuatro superficies. Todo lo demás se deriva de ahí.
+ *
+ * LA ESCALA TIPOGRÁFICA TIENE OCHO PASOS Y CADA UNO HACE UNA COSA
+ * Antes había un solo tamaño de título peleando con el contenido. Ahora el tamaño
+ * dice qué tan importante es algo, y no hay dos pasos que compitan.
+ *
+ * EL COLOR TAMBIÉN ESTRUCTURA, NO SOLO ALARMA
+ * Cuatro superficies —tinta, cálida, blanca y fondo— separan las zonas del panel:
+ * lo principal, lo urgente, lo informativo y el detalle. El rojo y el ámbar siguen
+ * reservados para el estado.
  */
 
 @theme {
   --font-sans: var(--fuente-inter), ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Menlo, Consolas, monospace;
 
-  /* --- Superficies -------------------------------------------------------- */
-  /* El fondo es gris muy claro y las tarjetas son blancas: así una tarjeta se
-     separa del fondo sin necesidad de sombra. */
-  --color-fondo: #f7f8f9;
+  /* --- Superficies. Cada una marca una zona distinta. --------------------- */
+  /** El fondo de la página: nada vive directamente aquí salvo el detalle. */
+  --color-fondo: #f4f5f7;
+  /** Tarjetas informativas. */
   --color-superficie: #ffffff;
-  --color-panel: #f2f4f5;
+  /** Zona urgente: papel apenas más cálido, sin llegar a alarma. */
+  --color-urgente: #fdfaf6;
+  --color-urgente-linea: #ecdfd0;
+  /** El bloque principal, en tinta. Es la única superficie oscura. */
+  --color-acento-superficie: #14181d;
+  --color-acento-linea: #2a3038;
+  /** Zonas secundarias dentro de una tarjeta. */
+  --color-panel: #f0f2f4;
 
   /* --- Líneas ------------------------------------------------------------- */
-  --color-linea: #e8eaed;
-  --color-linea-fuerte: #d6dae0;
+  --color-linea: #e6e9ed;
+  --color-linea-fuerte: #d2d7de;
 
-  /* --- Texto -------------------------------------------------------------- */
-  --color-tinta: #16191d;
-  --color-tenue: #6b7280;
-  --color-suave: #9ca3af;
+  /* --- Texto sobre claro --------------------------------------------------- */
+  --color-tinta: #14181d;
+  --color-tenue: #5f6875;
+  --color-suave: #98a1ad;
 
-  /* --- Estado. Solo esto lleva color. ------------------------------------- */
+  /* --- Texto sobre tinta --------------------------------------------------- */
+  --color-claro: #f7f9fb;
+  --color-claro-tenue: #a8b2bf;
+  --color-claro-suave: #6f7b8a;
+
+  /* --- Estado. Nada decorativo lleva color. ------------------------------- */
   --color-negativo: #c0392b;
-  --color-alerta: #b45309;
-  --color-positivo: #15803d;
+  --color-negativo-claro: #ff8b7d;
+  --color-alerta: #a8620a;
+  --color-alerta-claro: #f0b429;
+  --color-positivo: #16794a;
+  --color-positivo-claro: #4ade80;
   --color-acento: #2563eb;
-  --color-realce: #eff4ff;
+  --color-realce: #eef3ff;
 
-  /* --- Radios ------------------------------------------------------------- */
-  --radius-tarjeta: 10px;
+  /* --- Espaciado. Siete pasos, sin valores sueltos. ----------------------- */
+  --spacing-e1: 4px;
+  --spacing-e2: 8px;
+  --spacing-e3: 12px;
+  --spacing-e4: 16px;
+  --spacing-e5: 24px;
+  --spacing-e6: 32px;
+  --spacing-e7: 48px;
 
-  /* --- Sombras. Apenas perceptibles: la profundidad la da el borde. -------- */
-  --shadow-tarjeta: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --radius-tarjeta: 12px;
+  --radius-chico: 8px;
+
+  --shadow-tarjeta: 0 1px 2px rgba(20, 24, 29, 0.04);
+  --shadow-principal: 0 2px 16px rgba(20, 24, 29, 0.14);
 }
 
 html,
@@ -57,12 +87,81 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ==========================================================================
+   ESCALA TIPOGRÁFICA
+   Ocho pasos. El tamaño dice la importancia; no hay dos que compitan.
+   ========================================================================== */
+
+/** 1. La cifra del bloque principal. Aparece una sola vez por pantalla. */
+.t-display {
+  font-size: 36px;
+  line-height: 1.05;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  font-variant-numeric: tabular-nums;
+}
+
+/** 2. Título de la pantalla. */
+.t-pagina {
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/** 3. Encabezado de zona: URGENTE, EL DETALLE. Ordena la página, no compite. */
+.t-zona {
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--color-suave);
+}
+
+/** 4. Título de tarjeta. */
+.t-tarjeta {
+  font-size: 13px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/** 5. Rótulo sobre una cifra. */
+.t-rotulo {
+  font-size: 10.5px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+  color: var(--color-tenue);
+}
+
+/** 6. Cifra secundaria: la de una tarjeta, no la del bloque principal. */
+.t-cifra {
+  font-size: 21px;
+  line-height: 1.15;
+  font-weight: 500;
+  letter-spacing: -0.022em;
+  font-variant-numeric: tabular-nums;
+}
+
+/** 7. Cuerpo. */
+.t-cuerpo {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/** 8. Texto de apoyo: explica, nunca informa por sí solo. */
+.t-apoyo {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--color-tenue);
+}
+
 /*
- * Cifras.
- *
- * `tabular-nums` fija el ancho de cada dígito para que las columnas de montos se
- * alineen verticalmente. Sin esto un 1 ocupa menos que un 8 y la tabla baila.
- * `-0.01em` compensa que Inter deja los números un poco sueltos a este tamaño.
+ * Cifras en tabla. `tabular-nums` fija el ancho de cada dígito para que las
+ * columnas se alineen: sin esto un 1 ocupa menos que un 8 y la tabla baila.
  */
 .cifra {
   font-variant-numeric: tabular-nums;
@@ -70,28 +169,21 @@ body {
   letter-spacing: -0.01em;
 }
 
-/* El número grande de una tarjeta. */
-.cifra-titular {
+.monto {
+  text-align: right;
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum' 1;
-  font-size: 26px;
-  line-height: 1.15;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-}
-
-/* La etiqueta sobre el número grande. */
-.rotulo {
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--color-tenue);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .negativo {
   color: var(--color-negativo);
 }
+
+/* ==========================================================================
+   SUPERFICIES
+   ========================================================================== */
 
 .tarjeta {
   background: var(--color-superficie);
@@ -100,7 +192,30 @@ body {
   box-shadow: var(--shadow-tarjeta);
 }
 
-/* --- Tablas -------------------------------------------------------------- */
+/** El bloque principal. Domina por superficie, no por tamaño de fuente. */
+.tarjeta-principal {
+  background: var(--color-acento-superficie);
+  border: 1px solid var(--color-acento-linea);
+  border-radius: var(--radius-tarjeta);
+  box-shadow: var(--shadow-principal);
+  color: var(--color-claro);
+}
+
+/** La zona urgente: papel apenas cálido para separarla sin gritar. */
+.zona-urgente {
+  background: var(--color-urgente);
+  border: 1px solid var(--color-urgente-linea);
+  border-radius: var(--radius-tarjeta);
+}
+
+/** El detalle vive sobre el fondo, sin tarjeta: así queda subordinado. */
+.zona-detalle {
+  border-top: 1px solid var(--color-linea);
+}
+
+/* ==========================================================================
+   TABLAS
+   ========================================================================== */
 
 .tabla {
   width: 100%;
@@ -110,17 +225,19 @@ body {
 }
 
 .tabla thead th {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 500;
-  color: var(--color-tenue);
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--color-suave);
   text-align: left;
-  padding: 8px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--color-linea);
   white-space: nowrap;
 }
 
 .tabla tbody td {
-  padding: 9px 12px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--color-linea);
   vertical-align: middle;
 }
@@ -129,22 +246,19 @@ body {
   border-bottom: 0;
 }
 
-/* Las filas solo se resaltan si se puede hacer algo con ellas. */
 .tabla-interactiva tbody tr:hover td {
   background: var(--color-panel);
 }
 
-/* Montos: siempre a la derecha y con ancho de dígito fijo. */
-.tabla .monto,
-.monto {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
+/** Sobre la superficie de tinta las líneas tienen que aclarar, no oscurecer. */
+.tarjeta-principal .tabla tbody td,
+.tarjeta-principal .tabla thead th {
+  border-color: var(--color-acento-linea);
 }
 
-/* --- La grilla del flujo, que necesita encabezado y columna fijos --------- */
+/* ==========================================================================
+   LA GRILLA DEL FLUJO
+   ========================================================================== */
 
 .tabla-flujo {
   border-collapse: separate;
@@ -217,42 +331,41 @@ input.celda-input {
 }
 
 /*
- * Meses proyectados: no tienen cartola bancaria, así que sus montos vienen de la
- * proyección anual y no de hechos. Se marcan con una trama tenue para que no se
- * lean como si fueran reales.
+ * Meses proyectados: sus montos vienen de la proyección anual y no de hechos. La
+ * trama evita que se lean como reales.
  */
 .mes-proyectado {
   background-image: repeating-linear-gradient(
     135deg,
     transparent,
     transparent 5px,
-    rgba(180, 83, 9, 0.05) 5px,
-    rgba(180, 83, 9, 0.05) 10px
+    rgba(168, 98, 10, 0.05) 5px,
+    rgba(168, 98, 10, 0.05) 10px
   );
 }
 
 /*
- * Meses incompletos: existen solo porque hay deuda comprometida ahí. No tienen
- * ingresos ni gastos operacionales cargados, así que su saldo mide el peso del
- * compromiso y no la caja que quedará. Trama distinta de la de los proyectados
- * porque el problema es otro: ahí falta cartola, aquí falta el negocio entero.
+ * Meses incompletos: existen solo porque hay deuda comprometida ahí. Trama distinta
+ * de la de los proyectados porque el problema es otro: ahí falta cartola, aquí
+ * falta el negocio entero.
  */
 .mes-incompleto {
   background-image: repeating-linear-gradient(
     45deg,
     transparent,
     transparent 3px,
-    rgba(100, 116, 139, 0.07) 3px,
-    rgba(100, 116, 139, 0.07) 6px
+    rgba(95, 104, 117, 0.07) 3px,
+    rgba(95, 104, 117, 0.07) 6px
   );
 }
 
-/* Separador entre años en la proyección. */
 .corte-anio {
   border-left: 1px solid var(--color-linea-fuerte);
 }
 
-/* --- Estados de carga ---------------------------------------------------- */
+/* ==========================================================================
+   ESTADOS DE CARGA
+   ========================================================================== */
 
 /*
  * Bloque gris que ocupa el lugar exacto del contenido que viene. Se prefiere a un
@@ -262,12 +375,12 @@ input.celda-input {
   background: linear-gradient(
     90deg,
     var(--color-panel) 25%,
-    #e9ecef 37%,
+    #e4e8ec 37%,
     var(--color-panel) 63%
   );
   background-size: 400% 100%;
   animation: esqueleto 1.4s ease infinite;
-  border-radius: 4px;
+  border-radius: var(--radius-chico);
 }
 
 @keyframes esqueleto {
@@ -282,5 +395,24 @@ input.celda-input {
 @media (prefers-reduced-motion: reduce) {
   .esqueleto {
     animation: none;
+  }
+}
+
+/* ==========================================================================
+   BARRA LATERAL
+   ========================================================================== */
+
+.barra-lateral {
+  width: 208px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-linea);
+  background: var(--color-superficie);
+}
+
+@media (max-width: 900px) {
+  .barra-lateral {
+    width: 100%;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-linea);
   }
 }

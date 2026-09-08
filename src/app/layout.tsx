@@ -34,8 +34,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es-CL" className={inter.variable}>
       <body>
-        <Nav email={sesion?.email ?? null} salir={salir} />
-        <main>{children}</main>
+        {/* La barra lateral es hermana del contenido, no un encabezado: asi puede
+            quedar fija a pantalla completa mientras el contenido hace scroll. */}
+        <div className="flex min-h-screen flex-col lg:flex-row">
+          <Nav email={sesion?.email ?? null} salir={salir} />
+          <main className="min-w-0 flex-1">{children}</main>
+        </div>
       </body>
     </html>
   )
