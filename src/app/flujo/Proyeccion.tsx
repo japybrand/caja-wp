@@ -5,6 +5,9 @@ import type { Horizonte } from '@/lib/flujo'
 const clp = (n: number): string =>
   new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(Math.round(n))
 
+/** Las dos filas que responden "cómo terminó". Van en tinta, como en la grilla. */
+const FILAS_DESTACADAS = new Set(['saldo_inicial', 'flujo_financiero'])
+
 /**
  * El flujo a lo largo de varios años, de solo lectura.
  *
@@ -28,35 +31,35 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
   const ultima = columnas.at(-1)
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
-      <div className="flex items-center justify-between border-b border-linea px-4 py-2">
+    <div className="flex h-screen flex-col">
+      <div className="flex flex-wrap items-start justify-between gap-e4 border-b border-linea px-e5 py-e3">
         <div>
-          <h1 className="text-[14px] font-semibold tracking-tight">
+          <h1 className="t-pagina">
             Proyección {columnas[0]?.anio} – {ultima?.anio}
           </h1>
-          <p className="max-w-[95ch] text-[11px] text-tenue">
+          <p className="t-apoyo mt-e2 max-w-[95ch]">
             Las cuotas de convenio y la cuota Fogape entran solas desde su calendario. Los meses{' '}
-            <span className="text-amber-700">proy.</span> no tienen cartola. Los meses{' '}
-            <span className="text-slate-500">incompl.</span> no tienen ingresos ni gastos
+            <span className="text-alerta">proy.</span> no tienen cartola. Los meses{' '}
+            <span className="text-tenue">incompl.</span> no tienen ingresos ni gastos
             operacionales cargados: su saldo es el peso de la deuda comprometida, no un
             pronóstico de caja.
           </p>
         </div>
-        <div className="text-right text-[11px] text-tenue">
+        <div className="t-apoyo shrink-0 text-right">
           <Link href="/flujo" className="text-acento underline underline-offset-2">
             Volver al {anioEditable} editable
           </Link>
           <div className="mt-1">
             Saldo al cerrar {MESES_CORTOS[(ultima?.mes ?? 1) - 1]} {ultima?.anio}
           </div>
-          <div className={'cifra text-[13px] ' + (saldoFinal < 0 ? 'negativo' : '')}>
+          <div className={'t-cifra ' + (saldoFinal < 0 ? 'negativo' : '')}>
             {clp(saldoFinal)}
           </div>
         </div>
       </div>
 
       {aniosIncompletos.length > 0 ? (
-        <div className="border-b border-linea bg-panel px-4 py-1.5 text-[11px] text-tenue">
+        <div className="t-apoyo border-b border-linea bg-panel px-e5 py-e2">
           {aniosIncompletos.join(' y ')}{' '}
           {aniosIncompletos.length === 1 ? 'está incompleto' : 'están incompletos'}: solo traen
           servicio de deuda. El saldo que muestran es cuánto hay que generar para cubrirla, no
@@ -69,7 +72,7 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
           <thead>
             <tr>
               <th
-                className="col-fija px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-tenue"
+                className="col-fija pegado t-zona px-e3 py-e2 text-left"
                 style={{ minWidth: 260 }}
               >
                 Concepto
@@ -80,7 +83,7 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
                   <th
                     key={`${c.anio}-${c.mes}`}
                     className={
-                      'px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-tenue ' +
+                      'pegado t-zona px-e3 py-e2 text-right ' +
                       (naturaleza === 'proyectado' ? 'mes-proyectado ' : '') +
                       (naturaleza === 'incompleto' ? 'mes-incompleto ' : '') +
                       (inicioDeAnio.has(i) ? 'corte-anio' : '')
@@ -88,15 +91,15 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
                     style={{ minWidth: 96 }}
                   >
                     {MESES_CORTOS[c.mes - 1]}
-                    <div className="text-[9px] font-normal normal-case">
+                    <div className="text-[10.5px] font-normal normal-case">
                       {c.mes === 1 || i === 0 ? (
                         <span className="text-tinta">{c.anio}</span>
                       ) : naturaleza === 'real' ? (
                         'real'
                       ) : naturaleza === 'proyectado' ? (
-                        <span className="text-amber-700">proy.</span>
+                        <span className="text-alerta">proy.</span>
                       ) : (
-                        <span className="text-slate-500">incompl.</span>
+                        <span className="text-tenue">incompl.</span>
                       )}
                     </div>
                   </th>
@@ -109,19 +112,23 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
               const esEncabezado = fila.tipo === 'encabezado'
               const esResultado = fila.tipo === 'resultado' || fila.tipo === 'saldo'
               const esSubtotal = fila.tipo === 'subtotal'
+              // Las mismas dos filas que destaca la grilla editable.
+              const destacada = FILAS_DESTACADAS.has(fila.clave)
               return (
                 <tr
                   key={fila.clave}
                   className={
-                    (esEncabezado ? 'fila-encabezado bg-panel ' : '') +
-                    (esSubtotal ? 'fila-subtotal bg-panel font-medium ' : '') +
-                    (esResultado ? 'fila-resultado bg-realce font-medium ' : '')
+                    destacada
+                      ? 'fila-destacada font-medium'
+                      : (esEncabezado ? 'fila-encabezado bg-panel ' : '') +
+                        (esSubtotal ? 'fila-subtotal bg-panel font-medium ' : '') +
+                        (esResultado ? 'fila-resultado bg-panel font-medium ' : '')
                   }
                 >
                   <td
                     className={
-                      'col-fija px-3 py-1 text-[12px] ' +
-                      (esEncabezado ? 'text-[11px] font-semibold uppercase tracking-wide' : '')
+                      'col-fija px-e3 py-1 text-[12.5px] ' +
+                      (esEncabezado ? 't-zona' : '')
                     }
                   >
                     {fila.etiqueta}
@@ -143,7 +150,7 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
                       <td
                         key={i}
                         className={
-                          'cifra px-3 py-1 text-right ' +
+                          'monto px-e3 py-1 ' +
                           (naturaleza === 'proyectado' ? 'mes-proyectado ' : '') +
                           (naturaleza === 'incompleto' ? 'mes-incompleto ' : '') +
                           (inicioDeAnio.has(i) ? 'corte-anio ' : '') +
@@ -156,7 +163,7 @@ export function Proyeccion({ horizonte, anioEditable }: { horizonte: Horizonte; 
                           <>
                             {clp(monto)}
                             {desdeCalendario ? (
-                              <div className="text-[9px] uppercase tracking-wide text-acento">
+                              <div className="t-rotulo !text-acento">
                                 cuota
                               </div>
                             ) : null}

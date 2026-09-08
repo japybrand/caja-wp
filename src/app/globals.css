@@ -281,8 +281,26 @@ body {
 
 .fila-encabezado .col-fija,
 .fila-subtotal .col-fija,
-.fila-resultado .col-fija {
+.fila-resultado .col-fija,
+.fila-destacada .col-fija {
   background: inherit;
+}
+
+/*
+ * Las dos filas que responden "cómo terminó el mes": saldo inicial y flujo
+ * financiero. Van en tinta porque entre sesenta filas de grilla el peso visual es
+ * lo único que permite encontrarlas sin leer la columna de conceptos.
+ *
+ * La columna fija hereda el fondo, si no quedaría blanca sobre la fila oscura.
+ */
+.fila-destacada > td {
+  background: var(--color-acento-superficie);
+  color: var(--color-claro);
+  border-color: var(--color-acento-linea);
+}
+
+.fila-destacada .negativo {
+  color: var(--color-negativo-claro);
 }
 
 thead th.pegado {

@@ -84,21 +84,21 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
   const mesesReales = proyectadoPorMes.filter((p) => !p).length
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
-      <div className="flex items-center justify-between border-b border-linea px-4 py-2">
+    <div className="flex h-screen flex-col">
+      <div className="flex flex-wrap items-start justify-between gap-e4 border-b border-linea px-e5 py-e3">
         <div>
-          <h1 className="text-[14px] font-semibold tracking-tight">Flujo de caja {flujo.anio}</h1>
-          <p className="text-[11px] text-tenue">
+          <h1 className="t-pagina">Flujo de caja {flujo.anio}</h1>
+          <p className="t-apoyo mt-e2 max-w-[80ch]">
             Las filas en gris claro se editan: haz clic en la celda y sal para guardar. Los
             subtotales con ▸ se despliegan por proveedor. Las celdas marcadas{' '}
             <span className="text-acento">SII</span> traen facturación real del
             Registro de Ventas y no se editan. Los meses{' '}
-            <span className="text-amber-700">proy.</span> no tienen cartola: sus montos son
+            <span className="text-alerta">proy.</span> no tienen cartola: sus montos son
             proyección, no hechos. Las celdas con{' '}
             <span className="text-negativo">−rev</span> incluyen una reversa del banco.
           </p>
         </div>
-        <div className="text-right text-[11px] text-tenue">
+        <div className="t-apoyo shrink-0 text-right">
           <a href="/flujo?horizonte=1" className="text-acento underline underline-offset-2">
             Ver proyección hasta 2028
           </a>
@@ -107,7 +107,7 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
             {mesesReales} meses reales · {12 - mesesReales} proyectados
           </div>
           {flujo.hayPendientes ? (
-            <div className="mt-0.5 text-amber-800">
+            <div className="mt-0.5 text-alerta">
               Hay movimientos por revisar. No entran en el flujo hasta que los confirmes.
             </div>
           ) : null}
@@ -115,7 +115,7 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
       </div>
 
       {error ? (
-        <div className="border-b border-red-200 bg-red-50 px-4 py-1.5 text-[12px] text-negativo">
+        <div className="border-b border-negativo/25 bg-negativo/[0.04] px-e5 py-e2 text-[12.5px] text-negativo">
           {error}
         </div>
       ) : null}
@@ -124,7 +124,7 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
         <table className="tabla-flujo" style={{ minWidth: anchoTotal }}>
           <thead>
             <tr>
-              <th className="col-fija px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-tenue" style={{ minWidth: 260 }}>
+              <th className="col-fija pegado t-zona px-e3 py-e2 text-left" style={{ minWidth: 260 }}>
                 Concepto
               </th>
               {NUMEROS_MES.map((mes) => {
@@ -133,8 +133,8 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
                   <th
                     key={mes}
                     className={
-                      'px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide ' +
-                      (mes === mesActual ? 'mes-actual text-acento ' : 'text-tenue ') +
+                      'pegado t-zona px-e3 py-e2 text-right ' +
+                      (mes === mesActual ? 'mes-actual !text-acento ' : '') +
                       (proyectado ? 'mes-proyectado' : '')
                     }
                     style={{ minWidth: 96 }}
@@ -147,8 +147,8 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
                     {MESES_CORTOS[mes - 1]}
                     <div
                       className={
-                        'text-[9px] font-normal tracking-wide ' +
-                        (proyectado ? 'text-amber-700' : 'text-tenue')
+                        'text-[10.5px] font-normal tracking-wide ' +
+                        (proyectado ? 'text-alerta' : 'text-tenue')
                       }
                     >
                       {proyectado ? 'proy.' : 'real'}
@@ -156,7 +156,7 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
                   </th>
                 )
               })}
-              <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wide text-tenue" style={{ minWidth: 104 }}>
+              <th className="pegado t-zona px-e3 py-e2 text-right" style={{ minWidth: 104 }}>
                 Año
               </th>
             </tr>
@@ -180,10 +180,10 @@ export function GrillaFlujo({ flujo, mesActual }: Props) {
             ))}
 
             {flujo.hayPendientes ? (
-              <tr className="bg-amber-50 text-amber-900">
-                <td className="col-fija bg-amber-50 px-3 py-1.5 text-[12px] font-medium">
+              <tr className="bg-alerta/[0.06] text-alerta">
+                <td className="col-fija bg-alerta/[0.06] px-e3 py-1.5 text-[12.5px] font-medium">
                   Pendiente de revisión
-                  <span className="ml-1 font-normal text-[11px]">(no incluido arriba)</span>
+                  <span className="ml-1 text-[11.5px] font-normal">(no incluido arriba)</span>
                 </td>
                 {NUMEROS_MES.map((mes) => {
                   const monto = flujo.pendientePorMes[mes - 1] ?? 0
@@ -227,14 +227,28 @@ interface PropsFila {
   cancelarEdicion: () => void
 }
 
+/**
+ * La superficie de cada tipo de fila.
+ *
+ * `saldo`, `manual` y `derivada` no llevan fondo: lo pone la tabla. Repetirlo en
+ * cada fila competía con la trama de los meses proyectados.
+ */
 const CLASES_FILA: Record<string, string> = {
   encabezado: 'fila-encabezado bg-panel',
-  saldo: 'bg-white',
-  manual: 'bg-white',
-  derivada: 'bg-white',
-  subtotal: 'fila-subtotal bg-panel font-semibold',
-  resultado: 'fila-resultado bg-[#f3f4f6] font-semibold',
+  saldo: '',
+  manual: '',
+  derivada: '',
+  subtotal: 'fila-subtotal bg-panel font-medium',
+  resultado: 'fila-resultado bg-panel font-medium',
 }
+
+/**
+ * Las dos filas que responden "cómo terminó el mes".
+ *
+ * Van sobre la superficie de tinta: entre sesenta filas de una grilla, el peso
+ * visual es lo único que permite encontrarlas sin leer la columna de conceptos.
+ */
+const FILAS_DESTACADAS = new Set(['saldo_inicial', 'flujo_financiero'])
 
 function FilaTabla({
   fila,
@@ -250,13 +264,16 @@ function FilaTabla({
   cancelarEdicion,
 }: PropsFila) {
   const esExpandible = fila.tipo === 'derivada' && (fila.detalle?.length ?? 0) > 0
-  const claseFila = CLASES_FILA[fila.tipo] ?? 'bg-white'
+  const destacada = FILAS_DESTACADAS.has(fila.clave)
+  const claseFila = destacada
+    ? 'fila-destacada font-medium'
+    : (CLASES_FILA[fila.tipo] ?? '')
 
   if (fila.tipo === 'encabezado') {
     return (
       <tr className={claseFila}>
         <td
-          className="col-fija px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-tenue"
+          className="col-fija t-zona px-e3 pb-1 pt-e3"
           colSpan={1}
         >
           {fila.etiqueta}
@@ -286,11 +303,11 @@ function FilaTabla({
               className="flex w-full items-center gap-1.5 text-left hover:text-acento"
               aria-expanded={expandida}
             >
-              <span className="w-3 shrink-0 text-[10px] text-tenue">
+              <span className="w-3 shrink-0 text-[10.5px] text-tenue">
                 {expandida ? '▾' : '▸'}
               </span>
               <span>{fila.etiqueta}</span>
-              <span className="text-[10px] text-tenue">({fila.detalle?.length})</span>
+              <span className="text-[10.5px] text-suave">({fila.detalle?.length})</span>
             </button>
           ) : (
             <span className={fila.tipo === 'subtotal' || fila.tipo === 'resultado' ? '' : 'pl-[18px]'}>
@@ -364,11 +381,11 @@ function FilaTabla({
                 ? formatearCLPConCero(monto)
                 : formatearCLP(monto)}
               {desdeSII ? (
-                <div className="text-[9px] uppercase tracking-wide text-acento">SII</div>
+                <div className="t-rotulo !text-acento">SII</div>
               ) : null}
               {(fila.reversasPorMes?.[mes - 1] ?? 0) !== 0 ? (
                 <div
-                  className="text-[9px] uppercase tracking-wide text-negativo"
+                  className="t-rotulo !text-negativo"
                   title={`Incluye una reversa de ${formatearCLP(fila.reversasPorMes?.[mes - 1] ?? 0)}: un abono del banco que resta de esta fila de egreso.`}
                 >
                   −rev {formatearCLP(fila.reversasPorMes?.[mes - 1] ?? 0)}
@@ -376,7 +393,7 @@ function FilaTabla({
               ) : null}
               {(fila.pendientes[mes - 1] ?? 0) !== 0 ? (
                 <div
-                  className="text-[10px] text-amber-700"
+                  className="t-apoyo !text-alerta"
                   title="Por revisar: no está sumado en el flujo"
                 >
                   +{formatearCLP(fila.pendientes[mes - 1] ?? 0)}
@@ -394,7 +411,7 @@ function FilaTabla({
         >
           {fila.tipo === 'saldo' ? '' : formatearCLPConCero(fila.total)}
           {fila.totalPendiente !== 0 ? (
-            <div className="text-[10px] text-amber-700">+{formatearCLP(fila.totalPendiente)}</div>
+            <div className="t-apoyo !text-alerta">+{formatearCLP(fila.totalPendiente)}</div>
           ) : null}
         </td>
       </tr>
@@ -402,7 +419,7 @@ function FilaTabla({
       {expandida
         ? fila.detalle?.map((linea) => (
             <tr key={linea.clave} className="bg-[#fcfcfd] text-tenue">
-              <td className="col-fija py-1 pl-9 pr-3 text-[12px]">{linea.nombre}</td>
+              <td className="col-fija py-1 pl-9 pr-e3 text-[12.5px]">{linea.nombre}</td>
               {NUMEROS_MES.map((mes) => {
                 const monto = linea.montos[mes - 1] ?? 0
                 return (
