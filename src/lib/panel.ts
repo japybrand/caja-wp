@@ -68,6 +68,38 @@ export interface MesDeficit {
   naturaleza: NaturalezaMes
 }
 
+/**
+ * Una linea del desglose de egresos: lo del mes, lo que ya salio y lo que falta.
+ *
+ * `falta` es la resta cruda, sin piso en cero. Si una categoria sale negativa es
+ * porque se pago mas de lo presupuestado, y eso hay que verlo: taparlo con un
+ * Math.max haria que las columnas no sumaran y el desglose dejaria de servir para
+ * verificar el total, que es justamente para lo que existe.
+ */
+export interface LineaEgreso {
+  /**
+   * Identificador estable de la linea.
+   *
+   * No basta con el nombre: los retiros de septiembre son dos transferencias a la
+   * misma persona por montos distintos y comparten glosa exacta. Usar el nombre
+   * como clave de React colapsaba las dos en una.
+   */
+  clave: string
+  nombre: string
+  egreso: number
+  pagado: number
+  falta: number
+}
+
+export interface CategoriaEgreso extends LineaEgreso {
+  /** Por proveedor o por persona. Vacio en las filas que se cargan a mano. */
+  detalle: LineaEgreso[]
+}
+
+export interface GrupoEgreso extends LineaEgreso {
+  categorias: CategoriaEgreso[]
+}
+
 export interface Panel {
   anio: number
   mesActual: number
@@ -96,7 +128,8 @@ export interface Panel {
     porCobrar: number
     /** El valor sin el piso en cero: negativo significa que ya se cobro de mas. */
     porCobrarCrudo: number
-    egresosPorGrupo: { grupo: string; monto: number }[]
+    /** Por grupo, por categoria y por proveedor: las tres columnas en cada nivel. */
+    egresos: GrupoEgreso[]
     egresosDelMes: number
     yaPagado: number
     porPagar: number
@@ -187,10 +220,52 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
    * contaba gastos personales que nunca fueron egresos del flujo, y no reconocia
    * pagos reales sin enlace por clave foranea, como los envios de Global66.
    */
-  const yaPagado = GRUPOS_EGRESO.reduce(
-    (a, g) => a + (flujo.ejecutadoPorGrupo[g.grupo]?.[i] ?? 0),
-    0,
-  )
+  const ejecutadoDe = (categoriaId: string | undefined): number =>
+    categoriaId ? (flujo.ejecutadoPorCategoria[categoriaId]?.[i] ?? 0) : 0
+
+  const egresos: GrupoEgreso[] = GRUPOS_EGRESO.map((g) => {
+    const categorias: CategoriaEgreso[] = flujo.filas
+      .filter((f) => f.grupo === g.grupo && (f.tipo === 'manual' || f.tipo === 'derivada'))
+      .map((f) => {
+        const egreso = f.montos[i] ?? 0
+        const pagado = ejecutadoDe(f.categoriaId)
+        return {
+          clave: f.clave,
+          nombre: f.etiqueta,
+          egreso,
+          pagado,
+          falta: egreso - pagado,
+          detalle: (f.detalle ?? [])
+            .map((linea) => {
+              const suyo = linea.montos[i] ?? 0
+              const pagadoLinea =
+                flujo.ejecutadoPorDetalle[`${f.categoriaId}|${linea.clave}`]?.[i] ?? 0
+              return {
+                clave: linea.clave,
+                nombre: linea.nombre,
+                egreso: suyo,
+                pagado: pagadoLinea,
+                falta: suyo - pagadoLinea,
+              }
+            })
+            .filter((l) => l.egreso !== 0 || l.pagado !== 0)
+            .sort((a, b) => b.egreso - a.egreso),
+        }
+      })
+      .filter((c) => c.egreso !== 0 || c.pagado !== 0)
+    const suma = (f: (c: CategoriaEgreso) => number): number =>
+      categorias.reduce((a, c) => a + f(c), 0)
+    return {
+      clave: g.grupo,
+      nombre: g.etiqueta,
+      egreso: suma((c) => c.egreso),
+      pagado: suma((c) => c.pagado),
+      falta: suma((c) => c.falta),
+      categorias,
+    }
+  }).filter((g) => g.egreso !== 0 || g.pagado !== 0)
+
+  const yaPagado = egresos.reduce((a, g) => a + g.pagado, 0)
   const ingresosMes = fila('total_ingresos')[i] ?? 0
   const porCobrar = Math.max(ingresosMes - yaCobrado, 0)
   const porPagar = Math.max(egresosDelMes(mesActual) - yaPagado, 0)
@@ -203,10 +278,7 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     yaCobrado,
     porCobrar,
     porCobrarCrudo: ingresosMes - yaCobrado,
-    egresosPorGrupo: GRUPOS_EGRESO.map((g) => ({
-      grupo: g.etiqueta,
-      monto: sumaGrupo(g.grupo, mesActual),
-    })).filter((g) => g.monto !== 0),
+    egresos,
     egresosDelMes: egresosDelMes(mesActual),
     yaPagado,
     porPagar,

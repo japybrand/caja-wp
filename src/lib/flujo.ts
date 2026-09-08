@@ -121,7 +121,7 @@ export interface Flujo {
   anio: number
   filas: FilaFlujo[]
   /**
-   * Cuanto de cada grupo YA paso por la cuenta, mes a mes.
+   * Cuanto de cada categoria YA paso por la cuenta, mes a mes.
    *
    * Responde "de lo que este mes hay que pagar, cuanto ya salio". No se puede sacar
    * cruzando la cartola contra el flujo: varios pagos reales no tienen enlace por
@@ -130,8 +130,18 @@ export interface Flujo {
    * ya se rastrea: un Movimiento de la cartola o del export ya ocurrio; uno del
    * Excel es proyeccion. Un ValorManual con origen "banco" ya ocurrio; con origen
    * "sii" o "calendario" es lo que hay que pagar, no lo pagado.
+   *
+   * Va por categoria y no por grupo porque el grupo no se puede verificar: "de los
+   * 3.434.813 de proveedores ya pagaste 2.557.762" no dice cuales, y la unica forma
+   * de saber si el numero esta bien es abrirlo. Los grupos se suman aparte.
    */
-  ejecutadoPorGrupo: Record<string, number[]>
+  ejecutadoPorCategoria: Record<string, number[]>
+  /**
+   * Lo mismo, una linea de detalle mas abajo: `categoriaId|clave`, con la misma
+   * clave que usa `LineaDetalle` —el id del proveedor, o el del movimiento cuando
+   * no tiene—. Es lo que permite decir que AWS ya se pago y Verpex todavia no.
+   */
+  ejecutadoPorDetalle: Record<string, number[]>
   /** Total por revisar de cada mes, sumando todas las categorías. */
   pendientePorMes: number[]
   hayPendientes: boolean
@@ -224,7 +234,7 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
         estado: 'confirmado',
         OR: [{ fuente: { in: FUENTES_EJECUTADAS } }, { bancarios: { some: {} } }],
       },
-      select: { categoriaId: true, mes: true, montoCLP: true },
+      select: { id: true, categoriaId: true, proveedorId: true, mes: true, montoCLP: true },
     }),
     // F29 completo, indexado por el mes en que sale la plata.
     f29PorMesDePago(anio),
@@ -588,20 +598,24 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     for (let i = 0; i < 12; i += 1) pendientePorMes[i] = (pendientePorMes[i] ?? 0) + (montos[i] ?? 0)
   }
 
-  // --- Cuanto de cada grupo ya paso por la cuenta -------------------------
-  const grupoDe = new Map(categorias.map((c) => [c.id, c.grupo]))
-  const ejecutadoPorGrupo: Record<string, number[]> = {}
-  const sumarEjecutado = (categoriaId: string, mes: number, monto: number): void => {
-    const grupo = grupoDe.get(categoriaId)
-    if (!grupo || monto === 0) return
-    const fila = (ejecutadoPorGrupo[grupo] ??= CERO_12())
+  // --- Cuanto de cada categoria ya paso por la cuenta ----------------------
+  const ejecutadoPorCategoria: Record<string, number[]> = {}
+  const ejecutadoPorDetalle: Record<string, number[]> = {}
+  const sumarEn = (mapa: Record<string, number[]>, clave: string, mes: number, monto: number): void => {
+    if (monto === 0) return
+    const fila = (mapa[clave] ??= CERO_12())
     fila[mes - 1] = (fila[mes - 1] ?? 0) + monto
   }
   for (const m of movimientosEjecutados) {
-    sumarEjecutado(m.categoriaId, m.mes, m.montoCLP)
+    sumarEn(ejecutadoPorCategoria, m.categoriaId, m.mes, m.montoCLP)
+    // La misma clave que arma `acumularDetalle`: el proveedor si lo tiene, y si no
+    // el propio movimiento. Sin esto las dos tablas no se podrian cruzar.
+    sumarEn(ejecutadoPorDetalle, `${m.categoriaId}|${m.proveedorId ?? m.id}`, m.mes, m.montoCLP)
   }
   for (const v of valoresManuales) {
-    if (v.origen === 'banco') sumarEjecutado(v.categoriaId, v.mes, v.montoCLP)
+    // Un ValorManual es un solo numero por mes, sin proveedor: llega hasta la
+    // categoria y no mas abajo.
+    if (v.origen === 'banco') sumarEn(ejecutadoPorCategoria, v.categoriaId, v.mes, v.montoCLP)
   }
 
   const conCartola = new Set(mesesBancarios.filter((m) => m._count._all > 0).map((m) => m.mes))
@@ -621,7 +635,8 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
   return {
     anio,
     filas,
-    ejecutadoPorGrupo,
+    ejecutadoPorCategoria,
+    ejecutadoPorDetalle,
     pendientePorMes,
     hayPendientes: pendientePorMes.some((monto) => monto !== 0),
     naturalezaPorMes,
