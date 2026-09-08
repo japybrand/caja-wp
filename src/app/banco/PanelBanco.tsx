@@ -159,25 +159,25 @@ export function PanelBanco({
   }
 
   const control =
-    'rounded border border-linea-fuerte bg-white px-2 py-1 text-[12px] outline-none focus:border-acento'
+    'rounded border border-linea-fuerte px-2 py-1 text-[12.5px] outline-none focus:border-acento'
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
-      <div className="border-b border-linea px-4 py-2">
-        <h1 className="text-[14px] font-semibold tracking-tight">Banco {anio}</h1>
-        <p className="text-[11px] text-tenue">
+    <div className="mx-auto max-w-[1120px] px-e5 py-e5">
+      <div className="mb-e5">
+        <h1 className="t-pagina">Banco {anio}</h1>
+        <p className="t-apoyo">
           Cuenta corriente Santander ·{' '}
           {(porEstado.get('sin_conciliar')?.cantidad ?? 0) +
             (porEstado.get('conciliado')?.cantidad ?? 0) +
             (porEstado.get('ignorado')?.cantidad ?? 0)}{' '}
-          movimientos · <span className="text-amber-800">{cargosSinConciliar} sin conciliar</span> ·{' '}
+          movimientos · <span className="text-alerta">{cargosSinConciliar} sin conciliar</span> ·{' '}
           {porEstado.get('conciliado')?.cantidad ?? 0} conciliados ·{' '}
           {porEstado.get('ignorado')?.cantidad ?? 0} ignorados
         </p>
       </div>
 
       {aviso ? (
-        <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[12px] text-acento">
+        <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[12.5px] text-acento">
           <span>{aviso}</span>
           <button type="button" onClick={() => setAviso(null)} className="underline">
             cerrar
@@ -185,7 +185,7 @@ export function PanelBanco({
         </div>
       ) : null}
       {error ? (
-        <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-1.5 text-[12px] text-negativo">
+        <div className="flex items-center justify-between border-b border-negativo/25 bg-negativo/[0.04] px-4 py-1.5 text-[12.5px] text-negativo">
           <span>{error}</span>
           <button type="button" onClick={() => setError(null)} className="underline">
             cerrar
@@ -193,19 +193,19 @@ export function PanelBanco({
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
+      <div>
         {/* ---------------------------------------------------------- bandeja */}
         <div className="mb-2 flex items-baseline gap-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-tenue">
+          <h2 className="t-zona">
             Bandeja de sin conciliar
           </h2>
-          <span className="text-[11px] text-tenue">
+          <span className="t-apoyo">
             {grupos.length} glosas · {cargosSinConciliar} cargos ·{' '}
             {formatearCLPConCero(totalSinConciliar)}. Resolver una glosa resuelve todos sus cargos.
           </span>
         </div>
 
-        <table className="tabla-flujo w-full">
+        <table className="tabla tabla-interactiva">
           <thead>
             <tr>
               <Th>Glosa del banco</Th>
@@ -219,7 +219,7 @@ export function PanelBanco({
           <tbody>
             {grupos.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-[12px] text-tenue">
+                <td colSpan={6} className="px-3 py-8 text-center text-[12.5px] text-tenue">
                   No queda nada sin conciliar.
                 </td>
               </tr>
@@ -257,7 +257,7 @@ export function PanelBanco({
         </table>
 
         {/* ------------------------------------------------------------ lista */}
-        <h2 className="mb-2 mt-8 text-[11px] font-semibold uppercase tracking-wider text-tenue">
+        <h2 className="mb-2 mt-8 text-[11.5px] font-semibold uppercase tracking-wider text-tenue">
           Todos los movimientos
         </h2>
         <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -307,15 +307,15 @@ export function PanelBanco({
             <button
               type="button"
               onClick={() => router.push('/banco')}
-              className="text-[12px] text-acento underline underline-offset-2"
+              className="text-[12.5px] text-acento underline underline-offset-2"
             >
               Limpiar
             </button>
           ) : null}
-          <span className="text-[11px] text-tenue">{lista.length} filas</span>
+          <span className="t-apoyo">{lista.length} filas</span>
         </div>
 
-        <table className="tabla-flujo w-full">
+        <table className="tabla tabla-interactiva">
           <thead>
             <tr>
               <Th>Fecha</Th>
@@ -332,22 +332,22 @@ export function PanelBanco({
                 key={b.id}
                 className={
                   b.estado === 'sin_conciliar'
-                    ? 'bg-amber-50'
+                    ? 'bg-alerta/[0.06]'
                     : b.estado === 'ignorado'
-                      ? 'bg-[#fafafa] text-tenue'
-                      : 'bg-white'
+                      ? 'bg-panel text-tenue'
+                      : ''
                 }
               >
-                <td className="cifra px-3 py-1.5">{b.fecha}</td>
-                <td className="px-3 py-1.5">{b.descripcion}</td>
+                <td className="cifra">{b.fecha}</td>
+                <td>{b.descripcion}</td>
                 <td
                   className={'cifra px-3 py-1.5 text-right ' + (b.monto < 0 ? 'negativo' : 'text-acento')}
                 >
                   {formatearCLPConCero(b.monto)}
                 </td>
-                <td className="px-3 py-1.5 text-[11px]">
+                <td className="text-[11.5px]">
                   {b.estado === 'sin_conciliar' ? (
-                    <span className="rounded bg-amber-200 px-1.5 py-0.5 text-amber-900">
+                    <span className="rounded-[4px] bg-alerta/15 px-1.5 py-0.5 text-alerta">
                       sin conciliar
                     </span>
                   ) : b.estado === 'ignorado' ? (
@@ -356,18 +356,18 @@ export function PanelBanco({
                     <span className="text-acento">conciliado</span>
                   )}
                 </td>
-                <td className="px-3 py-1.5 text-[11px] text-tenue">
+                <td className="t-apoyo">
                   {b.movimiento
                     ? `${formatearCLPConCero(b.movimiento.monto)} · ${b.movimiento.descripcion.slice(0, 40)}`
                     : b.nota || '—'}
                 </td>
-                <td className="whitespace-nowrap px-3 py-1.5 text-right">
+                <td className="whitespace-nowrap text-right">
                   {b.estado !== 'sin_conciliar' ? (
                     <button
                       type="button"
                       disabled={pendiente}
                       onClick={() => correr(() => devolverABandeja(b.id))}
-                      className="text-[11px] text-tenue underline underline-offset-2 hover:text-tinta"
+                      className="text-[11.5px] text-tenue underline underline-offset-2 hover:text-tinta"
                     >
                       Devolver a la bandeja
                     </button>
@@ -414,17 +414,17 @@ function FilaGrupo(p: PropsGrupo) {
   const { g } = p
   return (
     <>
-      <tr className={g.esAbono ? 'bg-[#f6fbff]' : 'bg-white'}>
-        <td className="px-3 py-1.5">
+      <tr className={g.esAbono ? 'bg-realce' : ''}>
+        <td>
           {g.glosa}
           {g.esAbono ? (
-            <span className="ml-2 rounded bg-realce px-1.5 py-0.5 text-[10px] text-acento">
+            <span className="ml-2 rounded bg-realce px-1.5 py-0.5 text-[10.5px] text-acento">
               abono
             </span>
           ) : null}
         </td>
-        <td className="cifra px-3 py-1.5 text-right text-tenue">{g.cargos}</td>
-        <td className="px-3 py-1.5 text-[11px] text-tenue">
+        <td className="monto text-tenue">{g.cargos}</td>
+        <td className="t-apoyo">
           {g.meses
             .sort((a, b) => a - b)
             .map((m) => MESES_CORTOS[m - 1])
@@ -433,7 +433,7 @@ function FilaGrupo(p: PropsGrupo) {
         <td className={'cifra px-3 py-1.5 text-right ' + (g.total < 0 ? 'negativo' : 'text-acento')}>
           {formatearCLPConCero(g.total)}
         </td>
-        <td className="px-3 py-1.5 text-[11px]">
+        <td className="text-[11.5px]">
           {g.sugerido ? (
             <span className="text-acento">
               {g.sugerido}
@@ -443,11 +443,11 @@ function FilaGrupo(p: PropsGrupo) {
             <span className="text-tenue">—</span>
           )}
         </td>
-        <td className="px-3 py-1.5 text-right">
+        <td className="text-right">
           <button
             type="button"
             onClick={p.abrir}
-            className="text-[11px] text-acento underline underline-offset-2"
+            className="text-[11.5px] text-acento underline underline-offset-2"
           >
             {p.abierto ? 'cerrar' : 'resolver'}
           </button>
@@ -455,7 +455,7 @@ function FilaGrupo(p: PropsGrupo) {
       </tr>
 
       {p.abierto ? (
-        <tr className="bg-[#f5f8ff]">
+        <tr className="bg-realce">
           <td colSpan={6} className="px-3 py-3">
             <div className="mb-2 flex flex-wrap gap-1">
               {(
@@ -471,10 +471,10 @@ function FilaGrupo(p: PropsGrupo) {
                   type="button"
                   onClick={() => p.setAccion(valor)}
                   className={
-                    'rounded px-2.5 py-1 text-[11px] ' +
+                    'rounded px-2.5 py-1 text-[11.5px] ' +
                     (p.accion === valor
                       ? 'bg-acento font-medium text-white'
-                      : 'border border-linea-fuerte bg-white text-tenue hover:text-tinta')
+                      : 'border border-linea-fuerte text-tenue hover:text-tinta')
                   }
                 >
                   {etiqueta}
@@ -499,7 +499,7 @@ function FilaGrupo(p: PropsGrupo) {
                       ))}
                     </select>
                   </Campo>
-                  <span className="pb-1.5 text-[11px] text-tenue">
+                  <span className="pb-1.5 text-[11.5px] text-tenue">
                     La glosa se guarda como alias. No crea movimientos: si hay uno del mes con monto
                     parecido, enlaza.
                   </span>
@@ -598,24 +598,24 @@ function FilaGrupo(p: PropsGrupo) {
                 type="button"
                 onClick={p.ejecutar}
                 disabled={p.pendiente}
-                className="rounded bg-acento px-3 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {p.pendiente ? 'Aplicando…' : `Aplicar a los ${g.cargos} cargos`}
               </button>
             </div>
 
             {p.accion === 'manual' && p.vista?.ok && p.vista.filas ? (
-              <div className="mt-3 rounded border border-linea bg-white p-2">
-                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-tenue">
+              <div className="mt-3 rounded border border-linea p-2">
+                <div className="mb-1 text-[11.5px] font-semibold uppercase tracking-wide text-tenue">
                   Cómo queda la fila "{p.vista.categoria}"
                 </div>
                 {p.vista.hayValoresPrevios ? (
-                  <div className="mb-1.5 text-[11px] text-amber-800">
+                  <div className="mb-1.5 text-[11.5px] text-alerta">
                     Esta fila ya trae valores del Excel. Con <strong>sumar</strong> el pago se
                     contaría dos veces; <strong>reemplazar</strong> deja lo que dice el banco.
                   </div>
                 ) : null}
-                <table className="w-full text-[11px]">
+                <table className="w-full text-[11.5px]">
                   <thead>
                     <tr className="text-tenue">
                       <th className="px-2 py-0.5 text-left">Mes</th>
@@ -654,7 +654,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
   return (
     <th
       className={
-        'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tenue ' +
+        'px-3 py-2 text-[11.5px] font-semibold uppercase tracking-wide text-tenue ' +
         (alineacion === 'right' ? 'text-right' : 'text-left')
       }
     >
@@ -666,7 +666,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-tenue">{etiqueta}</span>
+      <span className="text-[10.5px] uppercase tracking-wide text-tenue">{etiqueta}</span>
       {children}
     </label>
   )

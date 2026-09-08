@@ -41,7 +41,7 @@ function Campo({
       onChange={(e) => onChange(e.target.value)}
       autoFocus={autoFocus}
       inputMode="numeric"
-      className="w-28 rounded border border-linea-fuerte bg-superficie px-1.5 py-0.5 text-right text-[12px] tabular-nums outline-none focus:border-acento"
+      className="w-28 rounded border border-linea-fuerte bg-superficie px-1.5 py-0.5 text-right text-[12.5px] tabular-nums outline-none focus:border-acento"
     />
   )
 }
@@ -87,7 +87,7 @@ export function TablaF29({ filas, anio }: { filas: F29DelMes[]; anio: number }) 
   return (
     <>
       {error ? (
-        <p className="mb-2 flex items-center gap-1.5 text-[12px] text-negativo">
+        <p className="mb-2 flex items-center gap-1.5 text-[12.5px] text-negativo">
           <AlertTriangle size={13} strokeWidth={2} />
           {error}
         </p>
@@ -213,7 +213,7 @@ export function TablaF29({ filas, anio }: { filas: F29DelMes[]; anio: number }) 
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[12px] text-tenue">
+      <p className="mt-3 text-[12.5px] text-tenue">
         El IVA no se edita: sale del registro de compras y ventas del SII. Deja el total en blanco
         para que se calcule como la suma de las partes.
       </p>

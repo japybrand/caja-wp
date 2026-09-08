@@ -49,7 +49,7 @@ export function DesgloseBrecha({ panel }: { panel: Panel }) {
 
   return (
     <details className="group mt-e4 border-t border-acento-linea pt-e3">
-      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12px] text-claro-tenue transition-colors hover:text-claro [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[12.5px] text-claro-tenue transition-colors hover:text-claro [&::-webkit-details-marker]:hidden">
         <ChevronRight
           size={13}
           strokeWidth={2}

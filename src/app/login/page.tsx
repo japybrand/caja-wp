@@ -15,15 +15,15 @@ export default async function PaginaLogin({ searchParams }: Props) {
   const error = typeof parametros['error'] === 'string' ? parametros['error'] : null
 
   return (
-    <div className="flex min-h-[calc(100vh-41px)] items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-[15px] font-semibold tracking-tight">Caja WP</h1>
-        <p className="mt-1 text-[12px] text-tenue">
+    <div className="flex min-h-screen items-center justify-center px-e5">
+      <div className="tarjeta w-full max-w-[380px] px-e5 py-e5">
+        <h1 className="t-pagina">Caja WP</h1>
+        <p className="t-apoyo mt-e2">
           Flujo de caja de Japybrand WP. El acceso está restringido a las cuentas autorizadas.
         </p>
 
         {error ? (
-          <p className="mt-4 rounded border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-negativo">
+          <p className="mt-e4 rounded-[8px] border border-negativo/25 bg-negativo/[0.04] px-e3 py-e2 text-[12.5px] text-negativo">
             {error === 'AccessDenied'
               ? 'Esa cuenta de Google no está autorizada para entrar.'
               : 'No se pudo completar el inicio de sesión. Inténtalo de nuevo.'}
@@ -31,21 +31,21 @@ export default async function PaginaLogin({ searchParams }: Props) {
         ) : null}
 
         <form
-          className="mt-5"
+          className="mt-e5"
           action={async () => {
             'use server'
-            await signIn('google', { redirectTo: '/flujo' })
+            await signIn('google', { redirectTo: '/' })
           }}
         >
           <button
             type="submit"
-            className="w-full rounded border border-linea-fuerte bg-white px-3 py-2 text-[13px] font-medium hover:bg-panel"
+            className="w-full rounded-[8px] bg-acento-superficie px-e3 py-e2 text-[13px] font-medium text-claro transition-opacity hover:opacity-90"
           >
             Entrar con Google
           </button>
         </form>
 
-        <p className="mt-4 text-[11px] leading-relaxed text-tenue">
+        <p className="t-apoyo mt-e4">
           El mismo permiso da acceso de solo lectura a Gmail, que es lo que usa la ingesta
           automática para leer los recibos de tus proveedores. No se envía ni se modifica ningún
           correo.

@@ -155,7 +155,7 @@ export function PanelInicio({ panel }: { panel: Panel }) {
         <div className="mt-e5 border-t border-acento-linea pt-e4">
           <div className="mb-e2 flex items-baseline justify-between">
             <span className="t-rotulo text-claro-suave">Cobertura de lo que viene</span>
-            <span className="cifra text-[12px] text-claro-tenue">
+            <span className="cifra text-[12.5px] text-claro-tenue">
               {Math.round(Math.min(cobertura, 999))}%
             </span>
           </div>
@@ -218,16 +218,25 @@ export function PanelInicio({ panel }: { panel: Panel }) {
             tono="alerta"
           >
             <Cifra
-              valor={clp(totalProximos)}
-              explica={`todo lo que vence en ${DIAS_VENTANA} días, incluido lo atrasado`}
+              valor={clp(totalProximos - totalAtrasado)}
+              explica={
+                totalAtrasado > 0
+                  ? `vence en los próximos ${DIAS_VENTANA} días, sin contar lo atrasado`
+                  : `vence en los próximos ${DIAS_VENTANA} días`
+              }
             />
-            {totalProximos > 0 ? (
+            {proximos.length > 0 ? (
               <div className="mt-e3 border-t border-urgente-linea pt-e2">
-                <ListaVencimientos items={[...atrasados, ...proximos]} />
+                <ListaVencimientos items={proximos} />
               </div>
             ) : (
               <Vacio icono={CheckCircle2} titulo="Nada vence en 15 días" />
             )}
+            {totalAtrasado > 0 ? (
+              <p className="t-apoyo mt-e3 border-t border-urgente-linea pt-e3">
+                Con lo atrasado son {clp(totalProximos)} en total.
+              </p>
+            ) : null}
             {alcanza ? null : (
               <Accion icono={ArrowRight} tono="negativo">
                 Cobra {clp(falta)} antes del {fechaEnPalabras(hasta)} para llegar.
@@ -308,8 +317,8 @@ export function PanelInicio({ panel }: { panel: Panel }) {
               {costos.map((c) => (
                 <div key={c.concepto}>
                   <div className="mb-1 flex items-baseline justify-between gap-e2">
-                    <span className="text-[12px]">{c.concepto}</span>
-                    <span className="cifra text-[12px] whitespace-nowrap">
+                    <span className="text-[12.5px]">{c.concepto}</span>
+                    <span className="cifra text-[12.5px] whitespace-nowrap">
                       {clp(c.monto)}
                       <span className="ml-1.5 text-suave">{c.porcentaje.toFixed(0)}%</span>
                     </span>
@@ -363,43 +372,42 @@ export function PanelInicio({ panel }: { panel: Panel }) {
       {/* ═══ 4. El detalle ════════════════════════════════════════════════ */}
       <Zona titulo="El detalle" nota="para cuando quieras profundizar">
         <div className="zona-detalle pt-e4">
-          <div className="mb-e2 flex items-baseline gap-e3">
-            <h3 className="t-tarjeta">Ingresos y egresos por mes</h3>
-          </div>
-          <p className="t-apoyo mb-e3 max-w-[70ch]">
-            La línea es el saldo acumulado del flujo, que mide la brecha entre lo comprometido y lo
-            que entró. No es el saldo de la cuenta.
-          </p>
-          <Grafico barras={barras} />
+          {/* El gráfico y la comparación van juntos: la comparación explica el
+              último tramo de la curva, y sola dejaba media columna vacía. */}
+          <div className="grid gap-e5 lg:grid-cols-[2fr_1fr]">
+            <div>
+              <h3 className="t-tarjeta">Ingresos y egresos por mes</h3>
+              <p className="t-apoyo mt-1 mb-e3 max-w-[70ch]">
+                La línea es el saldo acumulado del flujo, que mide la brecha entre lo comprometido
+                y lo que entró. No es el saldo de la cuenta.
+              </p>
+              <Grafico barras={barras} />
+            </div>
 
-          <div className="mt-e5 grid gap-e5 lg:grid-cols-2">
             {comparacion.length > 0 ? (
               <div>
-                <h3 className="t-tarjeta mb-e2">{nombreMes} contra el mes anterior</h3>
+                <h3 className="t-tarjeta">{nombreMes} contra el mes anterior</h3>
+                <p className="t-apoyo mt-1 mb-e3">Cómo se movió el último tramo.</p>
                 <table className="tabla">
-                  <thead>
-                    <tr>
-                      <th className="!pl-0">Concepto</th>
-                      <th className="!text-right">Anterior</th>
-                      <th className="!text-right">Actual</th>
-                      <th className="!pr-0 !text-right">Var.</th>
-                    </tr>
-                  </thead>
                   <tbody>
                     {comparacion.map((c) => {
                       const empeora =
                         c.variacion !== null && (c.masEsPeor ? c.variacion > 0 : c.variacion < 0)
                       return (
                         <tr key={c.concepto}>
-                          <td className="!pl-0">{c.concepto}</td>
-                          <td className="monto text-tenue">{clp(c.anterior)}</td>
-                          <td className="monto">{clp(c.actual)}</td>
-                          <td
-                            className={'monto !pr-0 ' + (empeora ? 'text-negativo' : 'text-tenue')}
-                          >
-                            {c.variacion === null
-                              ? '—'
-                              : `${c.variacion > 0 ? '+' : ''}${c.variacion.toFixed(0)}%`}
+                          <td className="!pl-0">
+                            <div>{c.concepto}</div>
+                            <div className="t-apoyo">antes {clp(c.anterior)}</div>
+                          </td>
+                          <td className="monto !pr-0">
+                            <div>{clp(c.actual)}</div>
+                            <div
+                              className={'t-apoyo ' + (empeora ? 'text-negativo' : 'text-tenue')}
+                            >
+                              {c.variacion === null
+                                ? '—'
+                                : `${c.variacion > 0 ? '+' : ''}${c.variacion.toFixed(0)}%`}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -408,39 +416,40 @@ export function PanelInicio({ panel }: { panel: Panel }) {
                 </table>
               </div>
             ) : null}
+          </div>
 
-            <div>
-              <h3 className="t-tarjeta mb-e2">Meses que cierran en negativo</h3>
-              {deficit.length === 0 ? (
-                <Vacio icono={CheckCircle2} tono="positivo" titulo="Ninguno" />
-              ) : (
-                <table className="tabla">
-                  <tbody>
-                    {deficit.map((d) => (
-                      <tr key={d.mes}>
-                        <td className="!pl-0">{d.mes}</td>
-                        <td>
-                          <Marca tono={d.naturaleza === 'real' ? 'neutro' : 'alerta'}>
-                            {d.naturaleza === 'real'
-                              ? 'real'
-                              : d.naturaleza === 'incompleto'
-                                ? 'incompleto'
-                                : 'proyectado'}
-                          </Marca>
-                        </td>
-                        <td className="monto !pr-0 text-negativo">{clp(d.saldo)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+          {/* Doce meses en una tabla vertical ocupaban una columna entera. En
+              cuadrícula se leen de un vistazo y ocupan tres líneas. */}
+          <div className="mt-e5">
+            <h3 className="t-tarjeta">Meses que cierran en negativo</h3>
+            <p className="t-apoyo mt-1 mb-e3">
+              El saldo acumulado al cierre de cada mes, no el déficit del mes solo.
+            </p>
+            {deficit.length === 0 ? (
+              <Vacio icono={CheckCircle2} tono="positivo" titulo="Ninguno cierra en negativo" />
+            ) : (
+              <div className="grid grid-cols-2 gap-x-e5 gap-y-e2 sm:grid-cols-3 lg:grid-cols-6">
+                {deficit.map((d) => (
+                  <div key={d.mes} className="border-t border-linea pt-e2">
+                    <div className="flex items-baseline justify-between gap-e2">
+                      <span className="text-[12.5px]">{d.mes}</span>
+                      {d.naturaleza === 'real' ? null : (
+                        <span className="t-apoyo text-alerta">
+                          {d.naturaleza === 'incompleto' ? 'incompl.' : 'proy.'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="cifra t-tarjeta mt-0.5 font-normal text-negativo">{clp(d.saldo)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </Zona>
 
       {porRevisar > 0 || sinConciliar > 0 ? (
-        <p className="mt-e5 flex flex-wrap gap-x-e5 gap-y-1 text-[12px]">
+        <p className="mt-e5 flex flex-wrap gap-x-e5 gap-y-1 text-[12.5px]">
           {porRevisar > 0 ? (
             <Link href="/movimientos" className="flex items-center gap-1 text-alerta hover:underline">
               <AlertTriangle size={13} strokeWidth={2} />

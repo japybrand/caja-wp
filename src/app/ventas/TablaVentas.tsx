@@ -64,22 +64,22 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
   const top3 = ranking.slice(0, 3).reduce((a, c) => a + c.porcentaje, 0)
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
-      <div className="border-b border-linea px-4 py-2">
-        <h1 className="text-[14px] font-semibold tracking-tight">Ventas {anio}</h1>
-        <p className="text-[11px] text-tenue">
+    <div className="mx-auto max-w-[1120px] px-e5 py-e5">
+      <div className="mb-e5">
+        <h1 className="t-pagina">Ventas {anio}</h1>
+        <p className="t-apoyo">
           Registro de Ventas del SII · {totalDocumentos} documentos ·{' '}
           {formatearCLPConCero(totalAnio)} facturado · {formatearCLPConCero(totalIVA)} de IVA
           débito · {ranking.length} clientes
         </p>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto px-4 py-3">
+      <div>
         {/* ---------------------------------------------------------- por mes */}
-        <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-tenue">
+        <h2 className="t-zona mb-e3">
           Detalle por mes
         </h2>
-        <table className="tabla-flujo w-full max-w-4xl">
+        <table className="tabla max-w-4xl">
           <thead>
             <tr>
               <Th>Mes</Th>
@@ -96,18 +96,18 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
             {conDatos.map((m) => {
               const dif = m.total - m.planilla
               return (
-                <tr key={m.mes} className="bg-white hover:bg-panel">
-                  <td className="px-3 py-1.5">{MESES[m.mes - 1]}</td>
-                  <td className="cifra px-3 py-1.5 text-right text-tenue">
+                <tr key={m.mes} >
+                  <td>{MESES[m.mes - 1]}</td>
+                  <td className="monto text-tenue">
                     {m.documentos}
                   </td>
-                  <td className="cifra px-3 py-1.5 text-right text-tenue">
+                  <td className="monto text-tenue">
                     {m.notasCredito === 0 ? '—' : m.notasCredito}
                   </td>
-                  <td className="cifra px-3 py-1.5 text-right">{formatearCLP(m.exento)}</td>
-                  <td className="cifra px-3 py-1.5 text-right">{formatearCLP(m.neto)}</td>
-                  <td className="cifra px-3 py-1.5 text-right">{formatearCLP(m.iva)}</td>
-                  <td className="cifra px-3 py-1.5 text-right font-medium">
+                  <td className="monto">{formatearCLP(m.exento)}</td>
+                  <td className="monto">{formatearCLP(m.neto)}</td>
+                  <td className="monto">{formatearCLP(m.iva)}</td>
+                  <td className="monto font-medium">
                     {formatearCLPConCero(m.total)}
                   </td>
                   <td
@@ -122,13 +122,13 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
               )
             })}
             <tr className="bg-panel font-semibold">
-              <td className="px-3 py-1.5">Total</td>
-              <td className="cifra px-3 py-1.5 text-right">{totalDocumentos}</td>
-              <td className="cifra px-3 py-1.5 text-right">{notas.length}</td>
-              <td className="cifra px-3 py-1.5 text-right">{formatearCLPConCero(totalExento)}</td>
-              <td className="cifra px-3 py-1.5 text-right">{formatearCLPConCero(totalNeto)}</td>
-              <td className="cifra px-3 py-1.5 text-right">{formatearCLPConCero(totalIVA)}</td>
-              <td className="cifra px-3 py-1.5 text-right">{formatearCLPConCero(totalAnio)}</td>
+              <td>Total</td>
+              <td className="monto">{totalDocumentos}</td>
+              <td className="monto">{notas.length}</td>
+              <td className="monto">{formatearCLPConCero(totalExento)}</td>
+              <td className="monto">{formatearCLPConCero(totalNeto)}</td>
+              <td className="monto">{formatearCLPConCero(totalIVA)}</td>
+              <td className="monto">{formatearCLPConCero(totalAnio)}</td>
               <td
                 className={
                   'cifra px-3 py-1.5 text-right ' + (diferenciaPlanilla < 0 ? 'negativo' : '')
@@ -141,7 +141,7 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
         </table>
 
         {sinDatos.length > 0 ? (
-          <p className="mt-2 max-w-4xl text-[11px] text-tenue">
+          <p className="mt-2 max-w-4xl text-[11.5px] text-tenue">
             Sin documentos del SII:{' '}
             <span className="font-medium">
               {sinDatos.map((m) => MESES_CORTOS[m.mes - 1]).join(' · ')}
@@ -149,7 +149,7 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
             . Esos meses siguen tomando el valor proyectado de la planilla en el flujo.
           </p>
         ) : null}
-        <p className="mt-1 max-w-4xl text-[11px] text-tenue">
+        <p className="mt-1 max-w-4xl text-[11.5px] text-tenue">
           Las diferencias chicas contra la planilla son comprobantes de pago electrónico
           (tipo 48), que el SII entrega como resumen mensual y no vienen en el detalle.
         </p>
@@ -157,10 +157,10 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
         {/* --------------------------------------------------- notas de crédito */}
         {notas.length > 0 ? (
           <>
-            <h2 className="mb-2 mt-6 text-[11px] font-semibold uppercase tracking-wider text-tenue">
+            <h2 className="mb-2 mt-6 text-[11.5px] font-semibold uppercase tracking-wider text-tenue">
               Notas de crédito y el documento que anulan
             </h2>
-            <table className="tabla-flujo w-full max-w-4xl">
+            <table className="tabla max-w-4xl">
               <thead>
                 <tr>
                   <Th>Mes</Th>
@@ -175,20 +175,20 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
                 {notas.map((n) => {
                   const cruzada = n.referenciaMes !== null && n.referenciaMes !== n.mes
                   return (
-                    <tr key={n.folio} className={cruzada ? 'bg-amber-50' : 'bg-white'}>
-                      <td className="px-3 py-1.5">{MESES_CORTOS[n.mes - 1]}</td>
-                      <td className="cifra px-3 py-1.5">{n.folio}</td>
-                      <td className="cifra px-3 py-1.5 text-tenue">{n.fecha}</td>
-                      <td className="px-3 py-1.5">{n.razonSocial}</td>
-                      <td className="cifra negativo px-3 py-1.5 text-right">
+                    <tr key={n.folio} className={cruzada ? 'bg-alerta/[0.06]' : ''}>
+                      <td>{MESES_CORTOS[n.mes - 1]}</td>
+                      <td className="cifra">{n.folio}</td>
+                      <td className="cifra text-tenue">{n.fecha}</td>
+                      <td>{n.razonSocial}</td>
+                      <td className="cifra negativo text-right">
                         {formatearCLPConCero(-n.montoTotal)}
                       </td>
-                      <td className="px-3 py-1.5 text-[11px]">
+                      <td className="text-[11.5px]">
                         {n.tipoReferencia ? (
                           <>
                             tipo {n.tipoReferencia} folio {n.folioReferencia}
                             {n.referenciaMes !== null ? (
-                              <span className={cruzada ? 'ml-1 font-medium text-amber-800' : 'ml-1 text-tenue'}>
+                              <span className={cruzada ? 'ml-1 font-medium text-alerta' : 'ml-1 text-tenue'}>
                                 · emitida en {MESES_CORTOS[n.referenciaMes - 1]}
                                 {n.mismoMonto ? ', la anula entera' : ', anulación parcial'}
                                 {cruzada ? ' — corrige otro mes' : ''}
@@ -213,15 +213,15 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
 
         {/* -------------------------------------------------------- clientes */}
         <div className="mb-2 mt-6 flex items-baseline gap-3">
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-tenue">
+          <h2 className="t-zona">
             Clientes del año
           </h2>
-          <span className="text-[11px] text-tenue">
+          <span className="t-apoyo">
             Los tres primeros concentran <span className="font-medium">{top3.toFixed(1)}%</span> de
             la facturación
           </span>
         </div>
-        <table className="tabla-flujo w-full max-w-4xl">
+        <table className="tabla max-w-4xl">
           <thead>
             <tr>
               <Th alineacion="right">#</Th>
@@ -236,17 +236,17 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
           </thead>
           <tbody>
             {visibles.map((c, i) => (
-              <tr key={c.rut} className="bg-white hover:bg-panel">
-                <td className="cifra px-3 py-1.5 text-right text-tenue">{i + 1}</td>
-                <td className="cifra px-3 py-1.5">{c.rut}</td>
-                <td className="px-3 py-1.5">{c.razonSocial}</td>
-                <td className="cifra px-3 py-1.5 text-right text-tenue">{c.documentos}</td>
-                <td className="cifra px-3 py-1.5 text-right">{formatearCLP(c.neto)}</td>
-                <td className="cifra px-3 py-1.5 text-right font-medium">
+              <tr key={c.rut} >
+                <td className="monto text-tenue">{i + 1}</td>
+                <td className="cifra">{c.rut}</td>
+                <td>{c.razonSocial}</td>
+                <td className="monto text-tenue">{c.documentos}</td>
+                <td className="monto">{formatearCLP(c.neto)}</td>
+                <td className="monto font-medium">
                   {formatearCLPConCero(c.total)}
                 </td>
-                <td className="cifra px-3 py-1.5 text-right">{c.porcentaje.toFixed(1)}%</td>
-                <td className="px-3 py-1.5" style={{ width: 160 }}>
+                <td className="monto">{c.porcentaje.toFixed(1)}%</td>
+                <td style={{ width: 160 }}>
                   <div className="h-2 w-full rounded-sm bg-linea">
                     <div
                       className="h-2 rounded-sm bg-acento"
@@ -263,7 +263,7 @@ export function TablaVentas({ anio, meses, ranking, notas, totalAnio, totalDocum
           <button
             type="button"
             onClick={() => setVerTodos(!verTodos)}
-            className="mt-2 text-[11px] text-acento underline underline-offset-2"
+            className="mt-2 text-[11.5px] text-acento underline underline-offset-2"
           >
             {verTodos ? 'Mostrar solo los 10 primeros' : `Ver los ${ranking.length} clientes`}
           </button>
@@ -279,7 +279,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
   return (
     <th
       className={
-        'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tenue ' +
+        'px-3 py-2 text-[11.5px] font-semibold uppercase tracking-wide text-tenue ' +
         (alineacion === 'right' ? 'text-right' : 'text-left')
       }
     >

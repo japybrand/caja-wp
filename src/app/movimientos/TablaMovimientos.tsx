@@ -237,14 +237,14 @@ export function TablaMovimientos({
   }
 
   const claseSelect =
-    'rounded border border-linea-fuerte bg-white px-2 py-1 text-[12px] outline-none focus:border-acento'
+    'rounded border border-linea-fuerte px-2 py-1 text-[12.5px] outline-none focus:border-acento'
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
+    <div className="mx-auto max-w-[1120px] px-e5 py-e5">
       <div className="flex items-start justify-between gap-4 border-b border-linea px-4 py-2">
         <div>
-          <h1 className="text-[14px] font-semibold tracking-tight">Movimientos {anio}</h1>
-          <p className="text-[11px] text-tenue">
+          <h1 className="t-pagina">Movimientos {anio}</h1>
+          <p className="t-apoyo">
             {movimientos.length.toLocaleString('es-CL')} movimientos ·{' '}
             {formatearCLPConCero(totalFiltrado)} en total
             {totalPorRevisar > 0 ? ` · ${totalPorRevisar} por revisar` : ''}
@@ -252,7 +252,7 @@ export function TablaMovimientos({
         </div>
         <div className="flex items-center gap-2">
           {ultimaSync ? (
-            <span className="text-[11px] text-tenue">
+            <span className="t-apoyo">
               última sincronización{' '}
               {new Date(ultimaSync.iniciadaEn).toLocaleString('es-CL', {
                 day: '2-digit',
@@ -269,14 +269,14 @@ export function TablaMovimientos({
             onClick={() => sincronizar(false)}
             disabled={pendiente}
             title="Lee los correos de los últimos 7 días de los remitentes aprobados"
-            className="rounded border border-linea-fuerte bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-panel disabled:opacity-50"
+            className="rounded border border-linea-fuerte px-3 py-1.5 text-[12.5px] font-medium hover:bg-panel disabled:opacity-50"
           >
             {pendiente ? 'Sincronizando…' : 'Sincronizar ahora'}
           </button>
           <button
             type="button"
             onClick={abrirNuevo}
-            className="rounded bg-acento px-3 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700"
+            className="rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700"
           >
             Nuevo movimiento
           </button>
@@ -284,7 +284,7 @@ export function TablaMovimientos({
       </div>
 
       {avisoSync ? (
-        <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[12px] text-acento">
+        <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[12.5px] text-acento">
           <span>{avisoSync}</span>
           <button type="button" onClick={() => setAvisoSync(null)} className="underline">
             cerrar
@@ -357,7 +357,7 @@ export function TablaMovimientos({
           <button
             type="button"
             onClick={() => router.push('/movimientos')}
-            className="text-[12px] text-acento underline underline-offset-2"
+            className="text-[12.5px] text-acento underline underline-offset-2"
           >
             Limpiar filtros
           </button>
@@ -365,7 +365,7 @@ export function TablaMovimientos({
       </div>
 
       {error ? (
-        <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-1.5 text-[12px] text-negativo">
+        <div className="flex items-center justify-between border-b border-negativo/25 bg-negativo/[0.04] px-4 py-1.5 text-[12.5px] text-negativo">
           <span>{error}</span>
           <button type="button" onClick={() => setError(null)} className="underline">
             cerrar
@@ -375,8 +375,8 @@ export function TablaMovimientos({
 
       {/* Formulario */}
       {formulario ? (
-        <div className="border-b border-linea-fuerte bg-[#f5f8ff] px-4 py-3">
-          <div className="mb-2 text-[12px] font-semibold">
+        <div className="border-b border-linea-fuerte bg-realce px-4 py-3">
+          <div className="t-tarjeta mb-e3">
             {editandoId ? 'Editar movimiento' : 'Nuevo movimiento'}
           </div>
           <div className="flex flex-wrap items-end gap-3">
@@ -489,14 +489,14 @@ export function TablaMovimientos({
                 type="button"
                 onClick={guardar}
                 disabled={pendiente}
-                className="rounded bg-acento px-3 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {pendiente ? 'Guardando…' : 'Guardar'}
               </button>
               <button
                 type="button"
                 onClick={cerrar}
-                className="rounded border border-linea-fuerte bg-white px-3 py-1.5 text-[12px]"
+                className="rounded border border-linea-fuerte px-3 py-1.5 text-[12.5px]"
               >
                 Cancelar
               </button>
@@ -506,8 +506,8 @@ export function TablaMovimientos({
       ) : null}
 
       {/* Tabla */}
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="tabla-flujo w-full">
+      <div>
+        <table className="tabla tabla-interactiva">
           <thead>
             <tr>
               <Th>Fecha</Th>
@@ -523,7 +523,7 @@ export function TablaMovimientos({
           <tbody>
             {movimientos.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-[12px] text-tenue">
+                <td colSpan={8} className="px-3 py-8 text-center text-[12.5px] text-tenue">
                   No hay movimientos con esos filtros.
                 </td>
               </tr>
@@ -533,13 +533,13 @@ export function TablaMovimientos({
               const abierto = correoAbierto === movimiento.id
               return (
                 <Fragment key={movimiento.id}>
-                <tr className={porRevisar ? 'bg-amber-50' : 'bg-white hover:bg-panel'}>
-                  <td className="cifra px-3 py-1.5">{movimiento.fecha}</td>
-                  <td className="px-3 py-1.5">{movimiento.categoriaNombre}</td>
-                  <td className="px-3 py-1.5 text-tenue">
+                <tr className={porRevisar ? 'bg-alerta/[0.06]' : 'hover:bg-panel'}>
+                  <td className="cifra">{movimiento.fecha}</td>
+                  <td>{movimiento.categoriaNombre}</td>
+                  <td className="text-tenue">
                     {movimiento.proveedorNombre ?? '—'}
                   </td>
-                  <td className="px-3 py-1.5">{movimiento.descripcion || '—'}</td>
+                  <td>{movimiento.descripcion || '—'}</td>
                   <td
                     className={
                       'cifra px-3 py-1.5 text-right ' + (movimiento.montoCLP < 0 ? 'negativo' : '')
@@ -547,30 +547,30 @@ export function TablaMovimientos({
                   >
                     {formatearCLPConCero(movimiento.montoCLP)}
                     {movimiento.monedaOriginal !== 'CLP' && movimiento.montoOriginal !== null ? (
-                      <span className="ml-1 text-[10px] text-tenue">
+                      <span className="ml-1 text-[10.5px] text-tenue">
                         ({movimiento.montoOriginal} {movimiento.monedaOriginal})
                       </span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-1.5 text-[11px] text-tenue">
+                  <td className="t-apoyo">
                     {ETIQUETA_FUENTE[movimiento.fuente as keyof typeof ETIQUETA_FUENTE] ??
                       movimiento.fuente}
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td>
                     {porRevisar ? (
-                      <span className="rounded bg-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+                      <span className="rounded-[4px] bg-alerta/15 px-1.5 py-0.5 text-[10.5px] font-medium text-alerta">
                         Por revisar
                       </span>
                     ) : (
-                      <span className="text-[11px] text-tenue">Confirmado</span>
+                      <span className="t-apoyo">Confirmado</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-1.5 text-right">
+                  <td className="whitespace-nowrap text-right">
                     {movimiento.correo ? (
                       <button
                         type="button"
                         onClick={() => setCorreoAbierto(abierto ? null : movimiento.id)}
-                        className="mr-2 text-[11px] text-tenue underline underline-offset-2 hover:text-tinta"
+                        className="mr-2 text-[11.5px] text-tenue underline underline-offset-2 hover:text-tinta"
                       >
                         {abierto ? 'ocultar correo' : 'ver correo'}
                       </button>
@@ -579,7 +579,7 @@ export function TablaMovimientos({
                       <button
                         type="button"
                         onClick={() => confirmar(movimiento.id)}
-                        className="mr-2 text-[11px] text-acento underline underline-offset-2"
+                        className="mr-2 text-[11.5px] text-acento underline underline-offset-2"
                       >
                         Confirmar
                       </button>
@@ -587,7 +587,7 @@ export function TablaMovimientos({
                     <button
                       type="button"
                       onClick={() => abrirEdicion(movimiento)}
-                      className="mr-2 text-[11px] text-acento underline underline-offset-2"
+                      className="mr-2 text-[11.5px] text-acento underline underline-offset-2"
                     >
                       Editar
                     </button>
@@ -596,14 +596,14 @@ export function TablaMovimientos({
                         <button
                           type="button"
                           onClick={() => borrar(movimiento.id)}
-                          className="mr-1 text-[11px] font-medium text-negativo underline underline-offset-2"
+                          className="mr-1 text-[11.5px] font-medium text-negativo underline underline-offset-2"
                         >
                           Confirmar borrado
                         </button>
                         <button
                           type="button"
                           onClick={() => setConfirmandoBorrado(null)}
-                          className="text-[11px] text-tenue underline underline-offset-2"
+                          className="text-[11.5px] text-tenue underline underline-offset-2"
                         >
                           No
                         </button>
@@ -612,7 +612,7 @@ export function TablaMovimientos({
                       <button
                         type="button"
                         onClick={() => setConfirmandoBorrado(movimiento.id)}
-                        className="text-[11px] text-tenue underline underline-offset-2 hover:text-negativo"
+                        className="text-[11.5px] text-tenue underline underline-offset-2 hover:text-negativo"
                       >
                         Eliminar
                       </button>
@@ -621,15 +621,15 @@ export function TablaMovimientos({
                 </tr>
 
                 {abierto && movimiento.correo ? (
-                  <tr className="bg-[#fbfbfd]">
+                  <tr className="bg-panel">
                     <td colSpan={8} className="px-3 py-2">
-                      <div className="grid gap-2 text-[11px] md:grid-cols-[minmax(0,1fr)_360px]">
+                      <div className="grid gap-2 text-[11.5px] md:grid-cols-[minmax(0,1fr)_360px]">
                         <div>
                           <Dato etiqueta="Asunto">{movimiento.correo.asunto || '(sin asunto)'}</Dato>
                           <Dato etiqueta="Remitente">{movimiento.correo.remitente}</Dato>
                           {movimiento.correo.nota ? (
                             <Dato etiqueta="Notas">
-                              <span className="text-amber-800">{movimiento.correo.nota}</span>
+                              <span className="text-alerta">{movimiento.correo.nota}</span>
                             </Dato>
                           ) : null}
                           <div className="mt-1.5 flex gap-3">
@@ -660,10 +660,10 @@ export function TablaMovimientos({
                           </div>
                         </div>
                         <div>
-                          <div className="mb-1 text-[10px] uppercase tracking-wide text-tenue">
+                          <div className="mb-1 text-[10.5px] uppercase tracking-wide text-tenue">
                             Respuesta del modelo
                           </div>
-                          <pre className="cifra max-h-48 overflow-auto whitespace-pre-wrap rounded border border-linea bg-white p-2 text-[10px] leading-relaxed">
+                          <pre className="cifra max-h-48 overflow-auto whitespace-pre-wrap rounded border border-linea p-2 text-[10.5px] leading-relaxed">
                             {formatearJson(movimiento.correo.respuestaModelo)}
                           </pre>
                         </div>
@@ -685,7 +685,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
   return (
     <th
       className={
-        'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tenue ' +
+        'px-3 py-2 text-[11.5px] font-semibold uppercase tracking-wide text-tenue ' +
         (alineacion === 'right' ? 'text-right' : 'text-left')
       }
     >
@@ -697,7 +697,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
 function Dato({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <div className="flex gap-2">
-      <span className="w-20 shrink-0 text-[10px] uppercase tracking-wide text-tenue">
+      <span className="w-20 shrink-0 text-[10.5px] uppercase tracking-wide text-tenue">
         {etiqueta}
       </span>
       <span className="min-w-0 break-words">{children}</span>
@@ -718,7 +718,7 @@ function formatearJson(crudo: string | null): string {
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-tenue">{etiqueta}</span>
+      <span className="text-[10.5px] uppercase tracking-wide text-tenue">{etiqueta}</span>
       {children}
     </label>
   )

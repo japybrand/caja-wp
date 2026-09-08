@@ -8,31 +8,6 @@ const ETIQUETA_TIPO: Record<string, string> = {
   linea_credito: 'Línea de crédito',
 }
 
-/** Un dato suelto del resumen: rótulo arriba, cifra abajo. */
-function Dato({
-  etiqueta,
-  valor,
-  tono = 'neutro',
-}: {
-  etiqueta: string
-  valor: string
-  tono?: 'neutro' | 'negativo' | 'alerta'
-}) {
-  return (
-    <div>
-      <div className="rotulo">{etiqueta}</div>
-      <div
-        className={
-          'cifra mt-1 text-[17px] font-medium tracking-[-0.01em] ' +
-          (tono === 'negativo' ? 'text-negativo' : tono === 'alerta' ? 'text-alerta' : '')
-        }
-      >
-        {valor}
-      </div>
-    </div>
-  )
-}
-
 export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
   const { obligaciones, calendario, cotizaciones, totales, cotizacionesAtrasadas } = estado
   const { compromisos, totalCompromisos, f29, totalF29 } = estado
@@ -44,27 +19,28 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
       titulo="Obligaciones"
       bajada="Convenios de la Tesorería, línea Fogape, Formulario 29 y cotizaciones previsionales"
     >
-      <div className="grid gap-3">
-        {/* ── Resumen ──────────────────────────────────────────────────────── */}
-        <Tarjeta>
-          <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-4">
-            <Dato etiqueta="Ya pagado" valor={clp(totales.pagado)} />
-            <Dato etiqueta="Pendiente" valor={clp(totales.pendiente)} tono="negativo" />
-            <Dato etiqueta="Cuotas por generar" valor={clp(totales.porGenerar)} />
-            <Dato
-              etiqueta="Mes más pesado"
-              valor={totales.peak ? clp(totales.peak.monto) : '—'}
-              tono="alerta"
-            />
-          </div>
-          {totales.peak ? (
-            <p className="mt-4 border-t border-linea pt-3 text-[12px] text-tenue">
-              El mes más pesado es {totales.peak.etiqueta}, con {clp(totales.peak.monto)} solo en
-              cuotas.
-            </p>
-          ) : null}
-        </Tarjeta>
+      {/* ═══ El estado de la deuda, en la superficie de tinta ════════════ */}
+      <Tarjeta variante="principal">
+        <div className="grid grid-cols-2 gap-e5 sm:grid-cols-4">
+          <Cifra rotulo="Pendiente" valor={clp(totales.pendiente)} tono="negativo" inverso />
+          <Cifra rotulo="Ya pagado" valor={clp(totales.pagado)} inverso />
+          <Cifra rotulo="Cuotas por generar" valor={clp(totales.porGenerar)} inverso />
+          <Cifra
+            rotulo="Mes más pesado"
+            valor={totales.peak ? clp(totales.peak.monto) : '—'}
+            tono="alerta"
+            inverso
+          />
+        </div>
+        {totales.peak ? (
+          <p className="t-apoyo mt-e5 border-t border-acento-linea pt-e3 text-claro-tenue">
+            El mes más pesado es {totales.peak.etiqueta}, con {clp(totales.peak.monto)} solo en
+            cuotas. Esa plata sale pase lo que pase.
+          </p>
+        ) : null}
+      </Tarjeta>
 
+      <div className="mt-e5 grid gap-e3">
         {cotizacionesAtrasadas > 0 ? (
           <Tarjeta titulo="Atención" icono={AlertTriangle} tono="negativo">
             <p className="text-[12.5px]">
@@ -104,7 +80,7 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
                       <span className="font-medium">
                         {o.institucion} {o.numero}
                       </span>
-                      <span className="ml-2 text-[11px] text-suave">
+                      <span className="ml-2 text-[11.5px] text-suave">
                         {ETIQUETA_TIPO[o.tipo] ?? o.tipo}
                       </span>
                     </td>
@@ -115,7 +91,7 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
                     <td className="monto">
                       {o.pendientes}
                       {o.porGenerar > 0 ? (
-                        <span className="ml-1.5 text-[11px] font-normal text-suave">
+                        <span className="ml-1.5 text-[11.5px] font-normal text-suave">
                           +{o.porGenerar} por generar
                         </span>
                       ) : null}
@@ -240,12 +216,12 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
               <div className="mb-3 flex flex-wrap items-baseline gap-x-8 gap-y-2">
                 <div>
                   <div className="rotulo">Total del año</div>
-                  <div className="cifra mt-1 text-[17px] font-medium tracking-[-0.01em]">
+                  <div className="t-cifra mt-e2">
                     {clp(totalF29)}
                   </div>
                 </div>
                 {f29Incompletos > 0 ? (
-                  <p className="text-[12px] text-alerta">
+                  <p className="text-[12.5px] text-alerta">
                     {f29Incompletos === 1
                       ? '1 período sin el formulario completo'
                       : `${f29Incompletos} períodos sin el formulario completo`}
@@ -316,7 +292,7 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
                         {c.diasDeAtraso === null ? (
                           <span className="text-linea-fuerte">·</span>
                         ) : c.diasDeAtraso === 0 ? (
-                          <span className="text-[11px] text-positivo">al día</span>
+                          <span className="text-[11.5px] text-positivo">al día</span>
                         ) : (
                           <span className={c.diasDeAtraso >= 60 ? 'text-negativo' : 'text-tenue'}>
                             {c.diasDeAtraso} d

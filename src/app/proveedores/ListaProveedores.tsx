@@ -122,14 +122,14 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
   }
 
   const claseControl =
-    'rounded border border-linea-fuerte bg-white px-2 py-1 text-[12px] outline-none focus:border-acento'
+    'rounded border border-linea-fuerte px-2 py-1 text-[12.5px] outline-none focus:border-acento'
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
+    <div className="mx-auto max-w-[1120px] px-e5 py-e5">
       <div className="flex items-start justify-between gap-4 border-b border-linea px-4 py-2">
         <div>
-          <h1 className="text-[14px] font-semibold tracking-tight">Proveedores y colaboradores</h1>
-          <p className="text-[11px] text-tenue">
+          <h1 className="t-pagina">Proveedores y colaboradores</h1>
+          <p className="t-apoyo">
             {proveedores.length} en total · {conRemitentes} con remitentes cargados
             {sinRemitentes > 0 ? ` · ${sinRemitentes} activos sin remitentes` : ''}
             {totalCandidatos > 0 ? ` · ${totalCandidatos} candidatos por revisar` : ''}
@@ -151,7 +151,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                 ? 'Busca en Gmail los remitentes de los proveedores activos que aún no tienen ninguno'
                 : 'Primero entra con Google para autorizar el acceso a Gmail'
             }
-            className="whitespace-nowrap rounded bg-acento px-3 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            className="whitespace-nowrap rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {pendiente ? 'Buscando…' : 'Buscar remitentes en Gmail'}
           </button>
@@ -159,14 +159,14 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
       </div>
 
       {!hayCuentaGoogle ? (
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-1.5 text-[12px] text-amber-900">
+        <div className="border-b border-amber-200 bg-alerta/[0.06] px-4 py-1.5 text-[12.5px] text-alerta">
           Todavía no hay una cuenta de Google conectada. Sal y vuelve a entrar con Google para
           autorizar el acceso de solo lectura a Gmail.
         </div>
       ) : null}
 
       {aviso ? (
-        <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[12px] text-acento">
+        <div className="flex items-center justify-between border-b border-blue-200 bg-blue-50 px-4 py-1.5 text-[12.5px] text-acento">
           <span>{aviso}</span>
           <button type="button" onClick={() => setAviso(null)} className="underline">
             cerrar
@@ -175,7 +175,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
       ) : null}
 
       {error ? (
-        <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-1.5 text-[12px] text-negativo">
+        <div className="flex items-center justify-between border-b border-negativo/25 bg-negativo/[0.04] px-4 py-1.5 text-[12.5px] text-negativo">
           <span>{error}</span>
           <button type="button" onClick={() => setError(null)} className="underline">
             cerrar
@@ -185,7 +185,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
 
       {totalCandidatos > 0 ? (
         <div className="flex items-center gap-2 border-b border-linea bg-panel px-4 py-1.5">
-          <label className="flex items-center gap-1.5 text-[12px]">
+          <label className="flex items-center gap-1.5 text-[12.5px]">
             <input
               type="checkbox"
               checked={soloConCandidatos}
@@ -196,8 +196,8 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="tabla-flujo w-full">
+      <div>
+        <table className="tabla tabla-interactiva">
           <thead>
             <tr>
               <Th>Proveedor</Th>
@@ -211,7 +211,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
           <tbody>
             {grupos.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-[12px] text-tenue">
+                <td colSpan={6} className="px-3 py-8 text-center text-[12.5px] text-tenue">
                   Ningún proveedor coincide con el filtro.
                 </td>
               </tr>
@@ -222,7 +222,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                 <tr className="bg-panel">
                   <td
                     colSpan={6}
-                    className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-tenue"
+                    className="px-3 pb-1 pt-3 text-[11.5px] font-semibold uppercase tracking-wider text-tenue"
                   >
                     {categoria}
                     <span className="ml-2 font-normal normal-case">
@@ -233,14 +233,14 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
 
                 {lista.map((proveedor) => (
                   <Fragment key={proveedor.id}>
-                    <tr className={proveedor.activo ? 'bg-white' : 'bg-[#fafafa]'}>
-                      <td className="px-3 py-1.5">
+                    <tr className={proveedor.activo ? '' : 'bg-panel text-tenue'}>
+                      <td>
                         <span className={proveedor.activo ? '' : 'text-tenue line-through'}>
                           {proveedor.nombre}
                         </span>
                       </td>
 
-                      <td className="px-3 py-1.5">
+                      <td>
                         <select
                           className={claseControl}
                           value={proveedor.monedaDefecto}
@@ -258,7 +258,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                         </select>
                       </td>
 
-                      <td className="px-3 py-1.5">
+                      <td>
                         <input
                           type="checkbox"
                           checked={proveedor.activo}
@@ -270,7 +270,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                         />
                       </td>
 
-                      <td className="px-3 py-1.5">
+                      <td>
                         {editandoRemitentes === proveedor.id ? (
                           <div className="flex items-center gap-2">
                             <input
@@ -294,14 +294,14 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                               type="button"
                               onClick={() => guardar(proveedor.id)}
                               disabled={pendiente}
-                              className="rounded bg-acento px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                              className="rounded bg-acento px-2 py-1 text-[11.5px] font-medium text-white disabled:opacity-50"
                             >
                               Guardar
                             </button>
                             <button
                               type="button"
                               onClick={() => setEditandoRemitentes(null)}
-                              className="text-[11px] text-tenue underline underline-offset-2"
+                              className="text-[11.5px] text-tenue underline underline-offset-2"
                             >
                               Cancelar
                             </button>
@@ -311,7 +311,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                             {proveedor.remitentes.map((remitente) => (
                               <span
                                 key={remitente}
-                                className="group inline-flex items-center gap-1 rounded bg-realce px-1.5 py-0.5 text-[11px] text-acento"
+                                className="group inline-flex items-center gap-1 rounded bg-realce px-1.5 py-0.5 text-[11.5px] text-acento"
                               >
                                 {remitente}
                                 <button
@@ -331,7 +331,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                                 setBorrador(proveedor.remitentes.join(', '))
                                 setError(null)
                               }}
-                              className="text-[11px] text-tenue underline decoration-dotted underline-offset-2"
+                              className="text-[11.5px] text-tenue underline decoration-dotted underline-offset-2"
                             >
                               {proveedor.remitentes.length === 0 ? 'agregar correos…' : 'editar'}
                             </button>
@@ -340,7 +340,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                                 type="button"
                                 onClick={() => buscar(proveedor.id)}
                                 disabled={pendiente}
-                                className="text-[11px] text-acento underline underline-offset-2 disabled:opacity-50"
+                                className="text-[11.5px] text-acento underline underline-offset-2 disabled:opacity-50"
                               >
                                 buscar en Gmail
                               </button>
@@ -349,7 +349,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                         )}
                       </td>
 
-                      <td className="cifra px-3 py-1.5 text-right text-tenue">
+                      <td className="monto text-tenue">
                         {proveedor.movimientos}
                       </td>
                       <td
@@ -363,17 +363,17 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                     </tr>
 
                     {proveedor.candidatos.length > 0 ? (
-                      <tr className="bg-[#fffdf5]">
+                      <tr className="bg-alerta/[0.05]">
                         <td colSpan={6} className="px-3 py-2">
                           <div className="mb-1.5 flex items-center gap-3">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                            <span className="text-[11.5px] font-semibold uppercase tracking-wide text-alerta">
                               Candidatos encontrados en Gmail ({proveedor.candidatos.length})
                             </span>
                             <button
                               type="button"
                               onClick={() => correr(() => aprobarTodosDe(proveedor.id))}
                               disabled={pendiente}
-                              className="text-[11px] text-acento underline underline-offset-2 disabled:opacity-50"
+                              className="text-[11.5px] text-acento underline underline-offset-2 disabled:opacity-50"
                             >
                               aprobar todos
                             </button>
@@ -389,21 +389,21 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                                 .map((candidato) => (
                                 <tr key={candidato.id} className="align-top">
                                   <td className="w-72 py-1 pr-3">
-                                    <div className="text-[12px] font-medium">{candidato.email}</div>
+                                    <div className="text-[12.5px] font-medium">{candidato.email}</div>
                                     {candidato.nombreDe ? (
-                                      <div className="text-[11px] text-tenue">
+                                      <div className="t-apoyo">
                                         {candidato.nombreDe}
                                       </div>
                                     ) : null}
                                   </td>
-                                  <td className="w-24 py-1 pr-3 text-[11px] text-tenue">
+                                  <td className="w-24 py-1 pr-3 text-[11.5px] text-tenue">
                                     {candidato.cantidad}{' '}
                                     {candidato.cantidad === 1 ? 'correo' : 'correos'}
                                   </td>
-                                  <td className="w-36 py-1 pr-3 text-[11px]">
+                                  <td className="w-36 py-1 pr-3 text-[11.5px]">
                                     {candidato.enCuantosProveedores >= UMBRAL_GENERICO ? (
                                       <span
-                                        className="rounded bg-amber-200 px-1.5 py-0.5 text-amber-900"
+                                        className="rounded-[4px] bg-alerta/15 px-1.5 py-0.5 text-alerta"
                                         title="Este mismo remitente aparece bajo varios proveedores, así que probablemente no sea de ninguno en particular."
                                       >
                                         genérico · {candidato.enCuantosProveedores} prov.
@@ -412,10 +412,10 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                                       <span className="text-tenue">solo aquí</span>
                                     )}
                                   </td>
-                                  <td className="w-28 py-1 pr-3 text-[11px] text-tenue">
+                                  <td className="w-28 py-1 pr-3 text-[11.5px] text-tenue">
                                     último {candidato.ultimoCorreo}
                                   </td>
-                                  <td className="py-1 pr-3 text-[11px] text-tenue">
+                                  <td className="py-1 pr-3 text-[11.5px] text-tenue">
                                     <span className="italic">
                                       {candidato.asuntoEjemplo || 'sin asunto'}
                                     </span>
@@ -425,7 +425,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                                       type="button"
                                       onClick={() => correr(() => aprobarCandidato(candidato.id))}
                                       disabled={pendiente}
-                                      className="mr-2 rounded bg-acento px-2 py-0.5 text-[11px] font-medium text-white disabled:opacity-50"
+                                      className="mr-2 rounded bg-acento px-2 py-0.5 text-[11.5px] font-medium text-white disabled:opacity-50"
                                     >
                                       Aprobar
                                     </button>
@@ -433,7 +433,7 @@ export function ListaProveedores({ proveedores, anio, hayCuentaGoogle }: Props) 
                                       type="button"
                                       onClick={() => correr(() => descartarCandidato(candidato.id))}
                                       disabled={pendiente}
-                                      className="text-[11px] text-tenue underline underline-offset-2 hover:text-negativo disabled:opacity-50"
+                                      className="text-[11.5px] text-tenue underline underline-offset-2 hover:text-negativo disabled:opacity-50"
                                     >
                                       Descartar
                                     </button>
@@ -478,7 +478,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
   return (
     <th
       className={
-        'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tenue ' +
+        'px-3 py-2 text-[11.5px] font-semibold uppercase tracking-wide text-tenue ' +
         (alineacion === 'right' ? 'text-right' : 'text-left')
       }
     >

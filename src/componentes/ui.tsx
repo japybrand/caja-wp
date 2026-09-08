@@ -71,7 +71,7 @@ export function Pagina({
           {bajada ? <p className="t-apoyo mt-0.5">{bajada}</p> : null}
         </div>
         {acciones ? (
-          <div className="flex items-center gap-e4 text-[12px]">{acciones}</div>
+          <div className="flex items-center gap-e4 text-[12.5px]">{acciones}</div>
         ) : null}
       </header>
       {children}
@@ -172,7 +172,7 @@ export function Tarjeta({
       {pie ? (
         <div
           className={
-            'px-e4 py-e3 text-[12px] ' +
+            'px-e4 py-e3 text-[12.5px] ' +
             (inverso
               ? 'border-t border-acento-linea text-claro-tenue'
               : 'border-t border-linea text-tenue')
@@ -240,7 +240,7 @@ export function Accion({
 }) {
   const color = inverso ? TEXTO_INVERSO : TEXTO
   return (
-    <p className={`mt-e3 flex items-start gap-1.5 text-[12px] font-medium ${color[tono]}`}>
+    <p className={`mt-e3 flex items-start gap-1.5 text-[12.5px] font-medium ${color[tono]}`}>
       {Icono ? <Icono size={14} strokeWidth={2} className="mt-px shrink-0" /> : null}
       <span>{children}</span>
     </p>
@@ -268,7 +268,7 @@ export function Marca({
   const color = inverso ? TEXTO_INVERSO : TEXTO
   return (
     <span
-      className={`inline-flex items-center gap-1.5 text-[11px] whitespace-nowrap ${color[tono] || (inverso ? 'text-claro-tenue' : 'text-tenue')}`}
+      className={`inline-flex items-center gap-1.5 text-[11.5px] whitespace-nowrap ${color[tono] || (inverso ? 'text-claro-tenue' : 'text-tenue')}`}
     >
       <span className={`size-1.5 shrink-0 rounded-full ${punto}`} />
       {children}
@@ -313,7 +313,7 @@ export function Vacio({
   return (
     <div className="flex flex-col items-center gap-1.5 px-e4 py-e6 text-center">
       {Icono ? <Icono size={20} strokeWidth={1.5} className={TEXTO[tono] || 'text-suave'} /> : null}
-      <p className={`text-[13px] font-medium ${TEXTO[tono]}`}>{titulo}</p>
+      <p className={`t-tarjeta ${TEXTO[tono]}`}>{titulo}</p>
       {detalle ? <p className="t-apoyo max-w-[46ch]">{detalle}</p> : null}
     </div>
   )

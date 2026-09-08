@@ -147,14 +147,14 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
   }
 
   const control =
-    'rounded border border-linea-fuerte bg-white px-2 py-1 text-[12px] outline-none focus:border-acento'
+    'rounded border border-linea-fuerte px-2 py-1 text-[12.5px] outline-none focus:border-acento'
 
   return (
-    <div className="flex h-[calc(100vh-41px)] flex-col">
+    <div className="mx-auto max-w-[1120px] px-e5 py-e5">
       <div className="flex items-start justify-between gap-4 border-b border-linea px-4 py-2">
         <div>
-          <h1 className="text-[14px] font-semibold tracking-tight">Reglas de clasificación</h1>
-          <p className="text-[11px] text-tenue">
+          <h1 className="t-pagina">Reglas de clasificación</h1>
+          <p className="t-apoyo">
             {reglas.length} reglas · Un mismo texto del banco puede ser cosas distintas: el monto
             desempata. Gana la regla con monto exacto; si no hay, la del mismo patrón sin monto.
           </p>
@@ -162,14 +162,14 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
         <button
           type="button"
           onClick={abrirNueva}
-          className="rounded bg-acento px-3 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700"
+          className="rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700"
         >
           Nueva regla
         </button>
       </div>
 
       {error ? (
-        <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-1.5 text-[12px] text-negativo">
+        <div className="flex items-center justify-between border-b border-negativo/25 bg-negativo/[0.04] px-4 py-1.5 text-[12.5px] text-negativo">
           <span>{error}</span>
           <button type="button" onClick={() => setError(null)} className="underline">
             cerrar
@@ -179,8 +179,8 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
 
       {/* Formulario */}
       {formulario ? (
-        <div className="border-b border-linea-fuerte bg-[#f5f8ff] px-4 py-3">
-          <div className="mb-2 text-[12px] font-semibold">
+        <div className="border-b border-linea-fuerte bg-realce px-4 py-3">
+          <div className="t-tarjeta mb-e3">
             {editandoId ? 'Editar regla' : 'Nueva regla'}
           </div>
           <div className="flex flex-wrap items-end gap-3">
@@ -244,7 +244,7 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
                 onChange={(e) => setFormulario({ ...formulario, nota: e.target.value })}
               />
             </Campo>
-            <label className="flex items-center gap-1.5 pb-1 text-[12px]">
+            <label className="flex items-center gap-1.5 pb-1 text-[12.5px]">
               <input
                 type="checkbox"
                 checked={formulario.activa}
@@ -257,14 +257,14 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
                 type="button"
                 onClick={guardar}
                 disabled={pendiente}
-                className="rounded bg-acento px-3 py-1.5 text-[12px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                className="rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 {pendiente ? 'Guardando…' : 'Guardar'}
               </button>
               <button
                 type="button"
                 onClick={() => setFormulario(null)}
-                className="rounded border border-linea-fuerte bg-white px-3 py-1.5 text-[12px]"
+                className="rounded border border-linea-fuerte px-3 py-1.5 text-[12.5px]"
               >
                 Cancelar
               </button>
@@ -299,16 +299,16 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
             type="button"
             onClick={probar}
             disabled={pendiente}
-            className="mb-0.5 rounded border border-linea-fuerte bg-white px-3 py-1.5 text-[12px] font-medium hover:bg-white/70 disabled:opacity-50"
+            className="mb-0.5 rounded border border-linea-fuerte px-3 py-1.5 text-[12.5px] font-medium hover:bg-panel disabled:opacity-50"
           >
             Probar
           </button>
           {prueba ? (
-            <div className="mb-1 text-[12px]">
+            <div className="mb-1 text-[12.5px]">
               {prueba.error ? (
                 <span className="text-negativo">{prueba.error}</span>
               ) : prueba.quedaSinConciliar ? (
-                <span className="text-amber-800">
+                <span className="text-alerta">
                   Quedaría sin conciliar — {prueba.explicacion}
                 </span>
               ) : (
@@ -324,8 +324,8 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
       </div>
 
       {/* Tabla */}
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className="tabla-flujo w-full">
+      <div>
+        <table className="tabla tabla-interactiva">
           <thead>
             <tr>
               <Th>Patrón de la glosa</Th>
@@ -340,35 +340,35 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
           <tbody>
             {reglas.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-[12px] text-tenue">
+                <td colSpan={7} className="px-3 py-8 text-center text-[12.5px] text-tenue">
                   No hay reglas todavía.
                 </td>
               </tr>
             ) : null}
             {reglas.map((r) => (
-              <tr key={r.id} className={r.activa ? 'bg-white' : 'bg-[#fafafa]'}>
-                <td className="px-3 py-1.5">
+              <tr key={r.id} className={r.activa ? '' : 'bg-panel text-tenue'}>
+                <td>
                   <span className={r.activa ? '' : 'text-tenue line-through'}>{r.patron}</span>
                   {patronesConVarias.has(r.patron) ? (
                     <span
-                      className="ml-2 rounded bg-realce px-1.5 py-0.5 text-[10px] text-acento"
+                      className="ml-2 rounded bg-realce px-1.5 py-0.5 text-[10.5px] text-acento"
                       title="Este patrón tiene más de una regla: el monto decide cuál gana."
                     >
                       precedencia
                     </span>
                   ) : null}
                 </td>
-                <td className="cifra px-3 py-1.5 text-right">
+                <td className="monto">
                   {r.montoExacto === null ? (
                     <span className="text-tenue">cualquiera</span>
                   ) : (
                     formatearCLPConCero(r.montoExacto)
                   )}
                 </td>
-                <td className="px-3 py-1.5">{r.categoriaNombre}</td>
-                <td className="px-3 py-1.5 text-tenue">{r.proveedorNombre ?? '—'}</td>
-                <td className="px-3 py-1.5 text-[11px] text-tenue">{r.nota || '—'}</td>
-                <td className="px-3 py-1.5">
+                <td>{r.categoriaNombre}</td>
+                <td className="text-tenue">{r.proveedorNombre ?? '—'}</td>
+                <td className="t-apoyo">{r.nota || '—'}</td>
+                <td>
                   <input
                     type="checkbox"
                     checked={r.activa}
@@ -379,11 +379,11 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
                     }}
                   />
                 </td>
-                <td className="whitespace-nowrap px-3 py-1.5 text-right">
+                <td className="whitespace-nowrap text-right">
                   <button
                     type="button"
                     onClick={() => abrirEdicion(r)}
-                    className="mr-2 text-[11px] text-acento underline underline-offset-2"
+                    className="mr-2 text-[11.5px] text-acento underline underline-offset-2"
                   >
                     Editar
                   </button>
@@ -392,14 +392,14 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
                       <button
                         type="button"
                         onClick={() => correr(() => eliminarRegla(r.id))}
-                        className="mr-1 text-[11px] font-medium text-negativo underline underline-offset-2"
+                        className="mr-1 text-[11.5px] font-medium text-negativo underline underline-offset-2"
                       >
                         Confirmar
                       </button>
                       <button
                         type="button"
                         onClick={() => setBorrando(null)}
-                        className="text-[11px] text-tenue underline underline-offset-2"
+                        className="text-[11.5px] text-tenue underline underline-offset-2"
                       >
                         No
                       </button>
@@ -408,7 +408,7 @@ export function TablaReglas({ reglas, categorias, proveedores }: Props) {
                     <button
                       type="button"
                       onClick={() => setBorrando(r.id)}
-                      className="text-[11px] text-tenue underline underline-offset-2 hover:text-negativo"
+                      className="text-[11.5px] text-tenue underline underline-offset-2 hover:text-negativo"
                     >
                       Eliminar
                     </button>
@@ -427,7 +427,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
   return (
     <th
       className={
-        'px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-tenue ' +
+        'px-3 py-2 text-[11.5px] font-semibold uppercase tracking-wide text-tenue ' +
         (alineacion === 'right' ? 'text-right' : 'text-left')
       }
     >
@@ -439,7 +439,7 @@ function Th({ children, alineacion }: { children: React.ReactNode; alineacion?: 
 function Campo({ etiqueta, children }: { etiqueta: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-wide text-tenue">{etiqueta}</span>
+      <span className="text-[10.5px] uppercase tracking-wide text-tenue">{etiqueta}</span>
       {children}
     </label>
   )
