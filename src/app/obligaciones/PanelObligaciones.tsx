@@ -1,6 +1,7 @@
-import { AlertTriangle, CalendarDays, CheckCircle2, Landmark, Users } from 'lucide-react'
+import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Landmark, Users } from 'lucide-react'
 import type { EstadoObligaciones } from '@/lib/obligaciones'
 import { Marca, Pagina, Tarjeta, Titular, Vacio, clp } from '@/componentes/ui'
+import { TablaF29 } from './TablaF29'
 
 const ETIQUETA_TIPO: Record<string, string> = {
   convenio_tgr: 'Convenio',
@@ -34,12 +35,14 @@ function Dato({
 
 export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
   const { obligaciones, calendario, cotizaciones, totales, cotizacionesAtrasadas } = estado
-  const { compromisos, totalCompromisos } = estado
+  const { compromisos, totalCompromisos, f29, totalF29 } = estado
+  const anioF29 = f29[0]?.anioPeriodo ?? new Date().getFullYear()
+  const f29Incompletos = f29.filter((f) => !f.completo || f.sinDesglosar > 0).length
 
   return (
     <Pagina
       titulo="Obligaciones"
-      bajada="Convenios de la Tesorería, línea Fogape y cotizaciones previsionales"
+      bajada="Convenios de la Tesorería, línea Fogape, Formulario 29 y cotizaciones previsionales"
     >
       <div className="grid gap-3">
         {/* ── Resumen ──────────────────────────────────────────────────────── */}
@@ -217,6 +220,43 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
             </div>
           </Tarjeta>
         ) : null}
+
+        {/* ── Formulario 29 ────────────────────────────────────────────────── */}
+        <Tarjeta
+          titulo="Formulario 29"
+          icono={FileText}
+          tono={f29Incompletos > 0 ? 'alerta' : 'neutro'}
+          bajada="La declaración mensual de impuestos. Vence el día 20 del mes siguiente al período. El IVA se calcula desde el SII; el resto lo informa tu contador."
+        >
+          {f29.length === 0 ? (
+            <Vacio
+              icono={FileText}
+              tono="alerta"
+              titulo="Sin períodos cargados"
+              detalle="Carga los registros de compras y ventas del SII para calcular el IVA."
+            />
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap items-baseline gap-x-8 gap-y-2">
+                <div>
+                  <div className="rotulo">Total del año</div>
+                  <div className="cifra mt-1 text-[17px] font-medium tracking-[-0.01em]">
+                    {clp(totalF29)}
+                  </div>
+                </div>
+                {f29Incompletos > 0 ? (
+                  <p className="text-[12px] text-alerta">
+                    {f29Incompletos === 1
+                      ? '1 período sin el formulario completo'
+                      : `${f29Incompletos} períodos sin el formulario completo`}
+                    : ahí el monto es solo el IVA o falta desglosar el total.
+                  </p>
+                ) : null}
+              </div>
+              <TablaF29 filas={f29} anio={anioF29} />
+            </>
+          )}
+        </Tarjeta>
 
         {/* ── Cotizaciones ─────────────────────────────────────────────────── */}
         <Tarjeta

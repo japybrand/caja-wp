@@ -65,8 +65,8 @@ export function PanelInicio({ panel }: { panel: Panel }) {
     proximos,
     totalProximos,
     falta,
-    iva,
-    ivaEnCurso,
+    f29,
+    f29EnCurso,
     costos,
     totalCostos,
     deudas,
@@ -194,47 +194,75 @@ export function PanelInicio({ panel }: { panel: Panel }) {
         </div>
 
         {/* 5 ─ IVA ───────────────────────────────────────────────────────── */}
-        <Tarjeta titulo="Cuánto IVA vas a pagar" icono={BadgePercent}>
-          {iva ? (
+        <Tarjeta titulo="Cuánto tienes que pagar de impuestos" icono={BadgePercent}>
+          {f29 ? (
             <>
               <Titular
-                valor={clp(iva.aPagar)}
-                explica={`IVA del período ${fechaEnPalabras(`2026-${String(iva.mes).padStart(2, '0')}-01`).split(' de ')[1]}, se paga antes del ${fechaEnPalabras(iva.venceEl)}`}
+                valor={clp(f29.total)}
+                explica={`Formulario 29 del período ${fechaEnPalabras(`2026-${String(f29.mesPeriodo).padStart(2, '0')}-01`).split(' de ')[1]}, se paga antes del ${fechaEnPalabras(f29.venceEl)}`}
               />
               <table className="tabla mt-3 max-w-lg border-t border-linea">
                 <tbody>
                   <tr>
-                    <td className="!pl-0">Le cobraste a tus clientes</td>
-                    <td className="monto">{clp(iva.debito)}</td>
-                    <td className="!pr-0 text-right text-[11px] text-suave">débito fiscal</td>
+                    <td className="!pl-0">IVA</td>
+                    <td className="monto">{clp(f29.iva?.aPagar ?? 0)}</td>
+                    <td className="!pr-0 text-right text-[11px] text-suave">
+                      calculado del SII
+                    </td>
                   </tr>
                   <tr>
-                    <td className="!pl-0">Te cobraron tus proveedores</td>
-                    <td className="monto">−{clp(iva.credito)}</td>
-                    <td className="!pr-0 text-right text-[11px] text-suave">crédito fiscal</td>
+                    <td className="!pl-0">PPM</td>
+                    <td className="monto">{f29.ppm > 0 ? clp(f29.ppm) : '—'}</td>
+                    <td className="!pr-0 text-right text-[11px] text-suave">
+                      pago provisional mensual
+                    </td>
                   </tr>
-                  {iva.remanenteAnterior > 0 ? (
-                    <tr>
-                      <td className="!pl-0">Tenías a favor del mes anterior</td>
-                      <td className="monto">−{clp(iva.remanenteAnterior)}</td>
-                      <td className="!pr-0 text-right text-[11px] text-suave">remanente</td>
+                  <tr>
+                    <td className="!pl-0">Retenciones de honorarios</td>
+                    <td className="monto">
+                      {f29.retencionesHonorarios > 0 ? clp(f29.retencionesHonorarios) : '—'}
+                    </td>
+                    <td className="!pr-0 text-right text-[11px] text-suave">boletas de terceros</td>
+                  </tr>
+                  <tr>
+                    <td className="!pl-0">Otros conceptos</td>
+                    <td className="monto">{f29.otros > 0 ? clp(f29.otros) : '—'}</td>
+                    <td className="!pr-0" />
+                  </tr>
+                  {f29.sinDesglosar > 0 ? (
+                    <tr className="text-alerta">
+                      <td className="!pl-0">Falta desglosar</td>
+                      <td className="monto">{clp(f29.sinDesglosar)}</td>
+                      <td className="!pr-0 text-right text-[11px]">del total del contador</td>
                     </tr>
                   ) : null}
                   <tr className="font-medium">
-                    <td className="!pl-0">Lo que le debes al SII</td>
-                    <td className="monto">{clp(iva.aPagar)}</td>
+                    <td className="!pl-0">Total del formulario</td>
+                    <td className="monto">{clp(f29.total)}</td>
                     <td className="!pr-0" />
                   </tr>
                 </tbody>
               </table>
-              {iva.remanente > 0 ? (
-                <Accion icono={CheckCircle2} tono="positivo">
-                  Te quedan {clp(iva.remanente)} a favor para descontar del próximo mes.
+              {f29.completo ? null : (
+                <Accion icono={AlertTriangle} tono="alerta">
+                  Este monto es solo el IVA: falta el resto del formulario. Cárgalo cuando tu
+                  contador te lo mande.
+                </Accion>
+              )}
+              {f29.sinDesglosar > 0 ? (
+                <Accion icono={AlertTriangle} tono="alerta">
+                  El total lo mandó tu contador, pero faltan {clp(f29.sinDesglosar)} por desglosar
+                  entre PPM, retenciones y otros.
                 </Accion>
               ) : null}
-              {ivaEnCurso ? (
+              {f29.iva && f29.iva.remanente > 0 ? (
+                <Accion icono={CheckCircle2} tono="positivo">
+                  Te quedan {clp(f29.iva.remanente)} de IVA a favor para el próximo mes.
+                </Accion>
+              ) : null}
+              {f29EnCurso ? (
                 <p className="mt-3 text-[12px] text-tenue">
-                  {nombreMes} va en {clp(ivaEnCurso.aPagar)}, pero el mes no ha terminado.
+                  {nombreMes} va en {clp(f29EnCurso.total)}, pero el mes no ha terminado.
                 </p>
               ) : null}
             </>

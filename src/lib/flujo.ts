@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { NUMEROS_MES, type Grupo } from '@/lib/dominio'
 import { signo } from '@/lib/sii/ventas'
-import { ivaPorMesDePago } from '@/lib/sii/iva'
+import { f29PorMesDePago } from '@/lib/sii/f29'
 
 /**
  * Replica del flujo de caja del Excel "Flujo de Caja 2026 - Japybrand WP".
@@ -30,15 +30,17 @@ import { ivaPorMesDePago } from '@/lib/sii/iva'
 const CATEGORIA_VENTAS = 'Ventas del mes'
 
 /**
- * Fila del IVA. Su monto sale del F29: debito de las ventas menos credito de las
- * compras, con el remanente arrastrado.
+ * Fila de impuestos. Lleva el F29 COMPLETO, no solo el IVA.
+ *
+ * Lo que sale de la cuenta es el formulario entero: IVA mas PPM, retenciones de
+ * honorarios y otros conceptos. Para el periodo agosto de 2026 el IVA son 1.470.812
+ * y el F29 2.429.918, casi un millon de diferencia. Mientras el contador no mande
+ * el formulario se usa el IVA calculado, que es lo mejor que se sabe.
  *
  * Ojo con el mes: el F29 de un periodo se paga hasta el dia 20 del mes siguiente,
- * asi que la fila de septiembre lleva el IVA del periodo agosto. La planilla lo
- * estimaba y se equivocaba en millones: marzo iba 2,2 millones abajo y abril 2
- * millones arriba.
+ * asi que la fila de septiembre lleva el formulario del periodo agosto.
  */
-const CATEGORIA_IVA = 'Pago de impuestos IVA'
+const CATEGORIA_IMPUESTOS = 'Pago de impuestos (F29)'
 
 /**
  * De dónde salió el monto de cada mes en una fila híbrida.
@@ -147,7 +149,7 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     ventasSII,
     mesesBancarios,
     reversasBancarias,
-    ivaDelF29,
+    f29,
     cuotasObligacion,
   ] = await Promise.all([
     prisma.categoria.findMany({
@@ -186,8 +188,8 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
       where: { anio, esReversa: true, categoriaManualId: { not: null } },
       _sum: { monto: true },
     }),
-    // IVA del F29, indexado por el mes en que sale la plata.
-    ivaPorMesDePago(anio),
+    // F29 completo, indexado por el mes en que sale la plata.
+    f29PorMesDePago(anio),
     // Cuotas de convenio y de la linea Fogape del ano.
     prisma.cuotaObligacion.findMany({
       where: { anio, obligacion: { categoriaId: { not: null }, activa: true } },
@@ -278,22 +280,22 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     origenPorCategoria.set(categoriaVentas.id, origen)
   }
 
-  // --- IVA del F29: pisa al valor manual en los meses que tienen los dos registros.
+  // --- F29: pisa al valor manual en los meses que se pueden calcular.
   //
-  // Se exige que el mes tenga ventas Y compras cargadas. Con solo uno de los dos el
-  // numero seria un debito sin credito o al reves, peor que la estimacion que
-  // reemplaza.
-  const categoriaIva = categorias.find((c) => c.nombre === CATEGORIA_IVA)
-  if (categoriaIva) {
-    const montos = montosPorCategoria.get(categoriaIva.id) ?? CERO_12()
-    montosPorCategoria.set(categoriaIva.id, montos)
+  // Entra si el contador ya mando el total, o si el periodo tiene ventas Y compras
+  // cargadas para calcular al menos el IVA. Con un solo registro del SII el numero
+  // seria un debito sin credito, peor que la estimacion que reemplaza.
+  const categoriaImpuestos = categorias.find((c) => c.nombre === CATEGORIA_IMPUESTOS)
+  if (categoriaImpuestos) {
+    const montos = montosPorCategoria.get(categoriaImpuestos.id) ?? CERO_12()
+    montosPorCategoria.set(categoriaImpuestos.id, montos)
     const origen = Array<OrigenMonto>(12).fill('manual')
-    for (const [mes, iva] of ivaDelF29) {
-      if (!iva.completo) continue
-      montos[mes - 1] = iva.aPagar
+    for (const [mes, f] of f29) {
+      if (!f.completo && !f.iva?.completo) continue
+      montos[mes - 1] = f.total
       origen[mes - 1] = 'sii'
     }
-    if (origen.some((o) => o === 'sii')) origenPorCategoria.set(categoriaIva.id, origen)
+    if (origen.some((o) => o === 'sii')) origenPorCategoria.set(categoriaImpuestos.id, origen)
   }
 
   // --- Calendario de obligaciones: pisa al valor manual en los meses con cuota.

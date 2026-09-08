@@ -41,7 +41,8 @@
     "importar-global66": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/importar-global66.ts",
     "global66-enero": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/global66-enero.ts",
     "cerrar-final": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/cerrar-bandeja-final.ts",
-    "importar-compras": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/importar-compras-sii.ts"
+    "importar-compras": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/importar-compras-sii.ts",
+    "cargar-f29": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/cargar-f29.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

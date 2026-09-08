@@ -14,7 +14,12 @@ next-env.d.ts
 .vercel
 
 # Cartolas bancarias: movimientos reales, nunca se versionan.
-cartolas/
+#
+# Las tres reglas van ancladas con "/" al inicio: sin la barra, Git ignora
+# CUALQUIER carpeta con ese nombre a cualquier profundidad. "sii/" estaba
+# ignorando tambien src/lib/sii/, o sea la biblioteca entera del SII, y el
+# repositorio no compilaba desde un clon limpio.
+/cartolas/
 *.xls
 *.xlsx
 # La planilla de origen NO se versiona: trae sueldos, montos de proveedores y el
@@ -23,10 +28,10 @@ cartolas/
 Flujo_de_Caja_2026_-_Japybrand_WP.xlsx
 
 # Registro de Compras y Ventas del SII: datos tributarios reales.
-sii/
+/sii/
 
 # Export de movimientos de la cuenta Global66: pagos a colaboradores.
-global66/
+/global66/
 
 # Renders temporales para revisar el diseño. No es parte de la app.
 .vista/

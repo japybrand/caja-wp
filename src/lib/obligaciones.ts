@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { MESES_CORTOS } from '@/lib/dominio'
+import { f29PorMes, type F29DelMes } from '@/lib/sii/f29'
 
 /**
  * Estado de las obligaciones con calendario cerrado (convenios de la Tesorería y
@@ -99,6 +100,9 @@ export interface EstadoObligaciones {
   cotizacionesAtrasadas: number
   compromisos: CompromisoVista[]
   totalCompromisos: number
+  /** Formulario 29 de cada período, con lo que falta por desglosar. */
+  f29: F29DelMes[]
+  totalF29: number
 }
 
 const clave = (anio: number, mes: number): string => `${anio}-${String(mes).padStart(2, '0')}`
@@ -106,7 +110,7 @@ const etiquetaMes = (anio: number, mes: number): string =>
   `${MESES_CORTOS[mes - 1] ?? mes} ${String(anio).slice(2)}`
 
 export async function estadoObligaciones(hoy: Date = new Date()): Promise<EstadoObligaciones> {
-  const [registros, cotizaciones, compromisos] = await Promise.all([
+  const [registros, cotizaciones, compromisos, f29] = await Promise.all([
     prisma.obligacionFinanciera.findMany({
       where: { activa: true },
       include: { cuotas: { orderBy: [{ anio: 'asc' }, { mes: 'asc' }] } },
@@ -120,6 +124,7 @@ export async function estadoObligaciones(hoy: Date = new Date()): Promise<Estado
       include: { proveedor: true },
       orderBy: [{ anio: 'asc' }, { mes: 'asc' }],
     }),
+    f29PorMes(hoy.getFullYear()),
   ])
 
   const obligaciones: ObligacionVista[] = registros.map((o) => {
@@ -225,5 +230,7 @@ export async function estadoObligaciones(hoy: Date = new Date()): Promise<Estado
       mes: m.mes,
     })),
     totalCompromisos: compromisos.reduce((a, m) => a + m.montoCLP, 0),
+    f29,
+    totalF29: f29.reduce((a, f) => a + f.total, 0),
   }
 }

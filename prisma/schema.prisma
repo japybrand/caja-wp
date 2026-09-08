@@ -502,3 +502,46 @@ model DocumentoCompra {
   @@unique([tipoDocumento, folio, rutProveedor])
   @@index([anio, mes])
 }
+
+/// Formulario 29: la declaracion mensual de impuestos.
+///
+/// Lo que sale de la cuenta cada mes NO es solo el IVA. El F29 suma IVA, PPM,
+/// retenciones de honorarios y otros conceptos, y el total lo informa el contador.
+/// Para el periodo agosto de 2026 el IVA calculado son 1.470.812 y el F29 completo
+/// 2.429.918: casi un millon de diferencia que el flujo no puede ignorar.
+///
+/// EL IVA NO SE GUARDA AQUI
+/// Se calcula desde los registros del SII en src/lib/sii/iva.ts. Guardarlo ademas
+/// en esta tabla crearia dos versiones del mismo numero que podrian discrepar.
+/// Aqui viven solo los conceptos que no se pueden derivar.
+model DeclaracionF29 {
+  id          String @id @default(cuid())
+  /// Periodo que se declara. Se paga hasta el dia 20 del mes siguiente.
+  anioPeriodo Int
+  mesPeriodo  Int
+
+  /// Pago provisional mensual.
+  ppm                   Int @default(0)
+  /// Retenciones de segunda categoria, o sea boletas de honorarios.
+  retencionesHonorarios Int @default(0)
+  /// Cualquier otro concepto del formulario.
+  otros                 Int @default(0)
+
+  /// Total que informa el contador.
+  ///
+  /// Se guarda aunque no venga el desglose: es frecuente recibir el monto a pagar
+  /// antes que el detalle. Cuando esta presente MANDA sobre la suma de las partes,
+  /// porque es lo que efectivamente se paga.
+  totalDeclarado Int?
+
+  /// pendiente | declarado | pagado
+  estado    String    @default("pendiente")
+  fechaPago DateTime?
+  nota      String    @default("")
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([anioPeriodo, mesPeriodo])
+  @@index([estado])
+}

@@ -268,7 +268,7 @@ export function PanelCargar({ anio, estado, hoy }: Props) {
         </p>
         <p className="mt-2 max-w-2xl text-[11px] text-tenue">
           El registro de compras es el crédito fiscal: con él, el IVA a pagar se calcula en vez
-          de estimarse. La fila "Pago de impuestos IVA" del flujo sale de ahí. La zona acepta el archivo y avisa.
+          de estimarse. La fila de impuestos del flujo sale de ahí. La zona acepta el archivo y avisa.
         </p>
 
         <div className="h-8" />

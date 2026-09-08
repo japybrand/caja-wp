@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { calcularFlujo, type NaturalezaMes } from '@/lib/flujo'
-import { ivaPorMes, type IvaDelMes } from '@/lib/sii/iva'
+import { f29PorMes, type F29DelMes } from '@/lib/sii/f29'
 import { MESES, MESES_CORTOS } from '@/lib/dominio'
 
 /**
@@ -94,9 +94,9 @@ export interface Panel {
   /** 4. Alcanza o no. */
   falta: number
 
-  /** 5. IVA. */
-  iva: IvaDelMes | null
-  ivaEnCurso: IvaDelMes | null
+  /** 5. Impuestos: el F29 completo, no solo el IVA. */
+  f29: F29DelMes | null
+  f29EnCurso: F29DelMes | null
 
   /** 6. Que cuesta mas. */
   costos: Costo[]
@@ -169,11 +169,12 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
   const porPagar = Math.max(egresosDelMes(mesActual) - yaPagado, 0)
   const brechaDelMes = saldoHoy + porCobrar - porPagar
 
-  // ── 5. IVA ─────────────────────────────────────────────────────────────────
-  const filasIva = await ivaPorMes(anio)
+  // ── 5. Impuestos ───────────────────────────────────────────────────────────
+  const filasF29 = await f29PorMes(anio)
   // El que se paga este mes es el del periodo anterior.
-  const iva = filasIva.find((f) => f.mesDePago.anio === anio && f.mesDePago.mes === mesActual) ?? null
-  const ivaEnCurso = filasIva.find((f) => f.mes === mesActual) ?? null
+  const f29 =
+    filasF29.find((f) => f.mesDePago.anio === anio && f.mesDePago.mes === mesActual) ?? null
+  const f29EnCurso = filasF29.find((f) => f.mesPeriodo === mesActual) ?? null
 
   // ── 2 y 3. Vencimientos ────────────────────────────────────────────────────
   const todos: Vencimiento[] = []
@@ -215,15 +216,15 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     })
   }
 
-  if (iva && iva.aPagar > 0) {
-    const vence = new Date(`${iva.venceEl}T12:00:00Z`)
+  if (f29 && f29.total > 0) {
+    const vence = new Date(`${f29.venceEl}T12:00:00Z`)
     if (vence <= hasta) {
       todos.push({
-        fecha: iva.venceEl,
+        fecha: f29.venceEl,
         dias: dias(vence),
-        concepto: `IVA del período ${MESES[iva.mes - 1]?.toLowerCase()}`,
+        concepto: `F29 del período ${MESES[f29.mesPeriodo - 1]?.toLowerCase()}`,
         accion: 'Declara y paga el F29',
-        monto: iva.aPagar,
+        monto: f29.total,
         vencido: vence < hoy,
       })
     }
@@ -360,14 +361,14 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     // El registro de ventas del mes en curso llega hasta donde el SII alcanzo a
     // registrar, asi que la proyeccion queda corta a proposito. Antes que estimar
     // desde promedios —que es lo que hacia la planilla y por eso fallaba— se avisa.
-    mesAMedias: (ivaEnCurso?.documentosVenta ?? 0) > 0 && mesActual === hoy.getMonth() + 1,
+    mesAMedias: (f29EnCurso?.iva?.documentosVenta ?? 0) > 0 && mesActual === hoy.getMonth() + 1,
     atrasados,
     totalAtrasado,
     proximos,
     totalProximos,
     falta: Math.max(totalProximos - saldoHoy, 0),
-    iva,
-    ivaEnCurso,
+    f29,
+    f29EnCurso,
     costos,
     totalCostos,
     deudas,

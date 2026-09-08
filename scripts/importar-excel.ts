@@ -94,7 +94,7 @@ const FILAS_MANUALES: { fila: number; categoria: string }[] = [
   { fila: 18, categoria: 'Línea de crédito Fogape Maxxa' },
   { fila: 19, categoria: 'Xepelin' },
   { fila: 46, categoria: 'Pago de cotizaciones Previred' },
-  { fila: 47, categoria: 'Pago de impuestos IVA' },
+  { fila: 47, categoria: 'Pago de impuestos (F29)' },
   { fila: 48, categoria: 'Pago de giros' },
   { fila: 49, categoria: 'Previred pagos postergados' },
   { fila: 50, categoria: 'Santander Pagos TGR' },

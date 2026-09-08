@@ -46,7 +46,7 @@ export const CATEGORIAS: DefinicionCategoria[] = [
 
   // Filas 46-51
   { nombre: 'Pago de cotizaciones Previred', grupo: 'impuestos', orden: 1, esManual: true },
-  { nombre: 'Pago de impuestos IVA', grupo: 'impuestos', orden: 2, esManual: true },
+  { nombre: 'Pago de impuestos (F29)', grupo: 'impuestos', orden: 2, esManual: true },
   { nombre: 'Pago de giros', grupo: 'impuestos', orden: 3, esManual: true },
   { nombre: 'Previred pagos postergados', grupo: 'impuestos', orden: 4, esManual: true },
   { nombre: 'Santander Pagos TGR', grupo: 'impuestos', orden: 5, esManual: true },

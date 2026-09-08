@@ -88,7 +88,7 @@ const A_FILA_MANUAL: { glosa: string; categoria: string; motivo: string }[] = [
   },
   {
     glosa: 'PAGO EN LINEA S.I.I.',
-    categoria: 'Pago de impuestos IVA',
+    categoria: 'Pago de impuestos (F29)',
     motivo: 'mar 637.943, calza exacto con la fila del Excel',
   },
 ]
