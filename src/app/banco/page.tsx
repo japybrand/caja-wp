@@ -3,6 +3,7 @@ import { ANIO_ACTIVO, leerRemitentes } from '@/lib/dominio'
 import { buscarProveedor } from '@/lib/banco/glosa'
 import { PanelBanco } from './PanelBanco'
 import type { Prisma } from '@prisma/client'
+import { contiene } from '@/lib/consulta'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export default async function PaginaBanco({ searchParams }: Props) {
   if (['sin_conciliar', 'conciliado', 'ignorado'].includes(filtros.estado)) {
     donde.estadoConciliacion = filtros.estado
   }
-  if (filtros.texto.trim() !== '') donde.descripcion = { contains: filtros.texto.trim() }
+  if (filtros.texto.trim() !== '') donde.descripcion = contiene(filtros.texto.trim())
 
   const [sinConciliar, lista, categorias, proveedores, conteos] = await Promise.all([
     prisma.movimientoBancario.findMany({

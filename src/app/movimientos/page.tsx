@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { ANIO_ACTIVO, esEstado, esFuente } from '@/lib/dominio'
 import { TablaMovimientos } from './TablaMovimientos'
 import type { Prisma } from '@prisma/client'
+import { contiene } from '@/lib/consulta'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,7 +32,7 @@ export default async function PaginaMovimientos({ searchParams }: Props) {
   if (filtros.proveedorId) donde.proveedorId = filtros.proveedorId
   if (esFuente(filtros.fuente)) donde.fuente = filtros.fuente
   if (esEstado(filtros.estado)) donde.estado = filtros.estado
-  if (filtros.texto.trim() !== '') donde.descripcion = { contains: filtros.texto.trim() }
+  if (filtros.texto.trim() !== '') donde.descripcion = contiene(filtros.texto.trim())
 
   const [movimientos, categorias, proveedores, totalPorRevisar, ultimaSync] = await Promise.all([
     prisma.movimiento.findMany({

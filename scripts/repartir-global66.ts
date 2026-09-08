@@ -24,6 +24,7 @@
 
 import { PrismaClient } from '@prisma/client'
 import { MESES_CORTOS } from '../src/lib/dominio'
+import { contiene } from '../src/lib/consulta'
 
 const prisma = new PrismaClient()
 const firme = process.argv.includes('--firme')
@@ -96,7 +97,7 @@ async function main(): Promise<void> {
 
   // Lo efectivamente enviado a Global66 cada mes. Los abonos restan: son plata que volvio.
   const transferencias = await prisma.movimientoBancario.findMany({
-    where: { anio: 2026, descripcion: { contains: GLOSA } },
+    where: { anio: 2026, descripcion: contiene(GLOSA) },
     orderBy: { fecha: 'asc' },
   })
   const enviadoPorMes = new Map<number, { total: number; ids: string[] }>()

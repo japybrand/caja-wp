@@ -370,9 +370,19 @@ export interface EstadoMes {
   mes: number
   cartola: boolean
   ventas: boolean
+  /**
+   * Registro de Compras del SII.
+   *
+   * Faltaba en esta pantalla y es la fuente del credito fiscal: sin el, el IVA del
+   * periodo se calcula con debito y sin credito, o sea el F29 sale sobreestimado y
+   * nada en la interfaz lo delata. Es justo el dato que hay que ir a buscar cada
+   * mes, asi que tiene que verse aca.
+   */
+  compras: boolean
   global66: boolean
   movimientosBanco: number
   documentosVenta: number
+  documentosCompra: number
   movimientosGlobal66: number
 }
 
@@ -380,13 +390,15 @@ export interface EstadoMes {
 export async function estadoDeCarga(anio: number): Promise<EstadoMes[]> {
   await requerirSesion()
 
-  const [banco, ventas, g66] = await Promise.all([
+  const [banco, ventas, compras, g66] = await Promise.all([
     prisma.movimientoBancario.groupBy({ by: ['mes'], where: { anio }, _count: { _all: true } }),
     prisma.documentoVenta.groupBy({ by: ['mes'], where: { anio }, _count: { _all: true } }),
+    prisma.documentoCompra.groupBy({ by: ['mes'], where: { anio }, _count: { _all: true } }),
     prisma.movimientoGlobal66.groupBy({ by: ['mes'], where: { anio }, _count: { _all: true } }),
   ])
   const b = new Map(banco.map((x) => [x.mes, x._count._all]))
   const v = new Map(ventas.map((x) => [x.mes, x._count._all]))
+  const c = new Map(compras.map((x) => [x.mes, x._count._all]))
   const g = new Map(g66.map((x) => [x.mes, x._count._all]))
 
   return Array.from({ length: 12 }, (_, i) => {
@@ -395,9 +407,11 @@ export async function estadoDeCarga(anio: number): Promise<EstadoMes[]> {
       mes,
       cartola: (b.get(mes) ?? 0) > 0,
       ventas: (v.get(mes) ?? 0) > 0,
+      compras: (c.get(mes) ?? 0) > 0,
       global66: (g.get(mes) ?? 0) > 0,
       movimientosBanco: b.get(mes) ?? 0,
       documentosVenta: v.get(mes) ?? 0,
+      documentosCompra: c.get(mes) ?? 0,
       movimientosGlobal66: g.get(mes) ?? 0,
     }
   })

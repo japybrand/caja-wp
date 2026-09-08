@@ -35,3 +35,8 @@ Flujo_de_Caja_2026_-_Japybrand_WP.xlsx
 
 # Renders temporales para revisar el diseño. No es parte de la app.
 .vista/
+
+# Respaldos de la base en JSON, para migrar entre SQLite y Postgres.
+# Llevan la cartola completa, los sueldos y el flujo entero: es el mismo dato que
+# /cartolas/. Nunca se versionan.
+/respaldo/

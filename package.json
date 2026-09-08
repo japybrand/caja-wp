@@ -42,7 +42,10 @@
     "global66-enero": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/global66-enero.ts",
     "cerrar-final": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/cerrar-bandeja-final.ts",
     "importar-compras": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/importar-compras-sii.ts",
-    "cargar-f29": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/cargar-f29.ts"
+    "cargar-f29": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/cargar-f29.ts",
+    "exportar-datos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/exportar-datos.ts",
+    "proyeccion": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/proyeccion-recurrentes.ts",
+    "reclasificar-ingram": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/reclasificar-ingram.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -25,6 +25,7 @@ import { PrismaClient } from '@prisma/client'
 import { parsearExportG66, esExportGlobal66 } from '../src/lib/global66/parser'
 import { repartirPorMes, hashMovimiento } from '../src/lib/global66/reparto'
 import { MESES_CORTOS } from '../src/lib/dominio'
+import { contiene } from '../src/lib/consulta'
 
 const prisma = new PrismaClient()
 const firme = process.argv.includes('--firme')
@@ -111,7 +112,7 @@ async function main(): Promise<void> {
 
   // Transferencias desde Santander, para cuadrar.
   const santander = await prisma.movimientoBancario.findMany({
-    where: { anio: ANIO, descripcion: { contains: 'Japybrand SPA' } },
+    where: { anio: ANIO, descripcion: contiene('Japybrand SPA') },
   })
   const porMesSantander = new Map<number, { total: number; ids: string[] }>()
   for (const s of santander) {

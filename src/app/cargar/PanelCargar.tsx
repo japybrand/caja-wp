@@ -64,6 +64,7 @@ export function PanelCargar({ anio, estado, hoy }: Props) {
     const falta: string[] = []
     if (!e.cartola) falta.push('la cartola de Santander')
     if (!e.ventas) falta.push('el registro de ventas del SII')
+    if (!e.compras) falta.push('el registro de compras del SII')
     if (!e.global66) falta.push('los movimientos de Global66')
     return falta.length > 0 ? [{ mes: objetivo, falta }] : []
   }, [estado, hoy, anio])
@@ -207,7 +208,9 @@ export function PanelCargar({ anio, estado, hoy }: Props) {
               <Th>Cartola</Th>
               <Th alineacion="right">Movimientos</Th>
               <Th>Ventas SII</Th>
-              <Th alineacion="right">Documentos</Th>
+              <Th alineacion="right">Docs</Th>
+              <Th>Compras SII</Th>
+              <Th alineacion="right">Docs</Th>
               <Th>Global66</Th>
               <Th>En el flujo</Th>
             </tr>
@@ -235,6 +238,16 @@ export function PanelCargar({ anio, estado, hoy }: Props) {
                 </td>
                 <td className="monto text-tenue">
                   {e.documentosVenta || '—'}
+                </td>
+                <td>
+                  {e.compras ? (
+                    <span className="text-acento">✓ cargadas</span>
+                  ) : (
+                    <span className="text-tenue">—</span>
+                  )}
+                </td>
+                <td className="monto text-tenue">
+                  {e.documentosCompra || '—'}
                 </td>
                 <td>
                   {e.global66 ? (

@@ -11,7 +11,13 @@ import { ejecutarIngesta } from '@/lib/ingesta'
  */
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+/*
+ * 60 segundos: el tope del plan Hobby de Vercel. Estaba en 300, que es el limite
+ * del plan Pro; en Hobby la funcion se corta igual, pero declarar 300 hace creer
+ * que hay margen que no existe. Si la ingesta no alcanza a terminar, la salida es
+ * bajar la ventana de dias, no subir este numero.
+ */
+export const maxDuration = 60
 
 export async function GET(peticion: Request): Promise<NextResponse> {
   const secreto = process.env.CRON_SECRET

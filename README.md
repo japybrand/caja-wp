@@ -1060,6 +1060,106 @@ sigue viviendo en `/flujo` y `/obligaciones`.
 
 ---
 
+## Fase 8: producción
+
+Supabase para la base, Vercel para la app, Resend para los avisos. El dominio es
+`caja.japybrand.com`.
+
+### Los ids se conservan al migrar, y eso es todo lo que importa
+
+`npm run exportar-datos` deja la base entera en `respaldo/datos-AAAA-MM-DD.json`;
+el script que lo reconstruye en el otro motor se escribe cuando exista la base de
+Supabase. No hay dump de SQLite que
+PostgreSQL entienda —las fechas y los booleanos se guardan distinto—, así que el
+JSON pasa por Prisma, que traduce los tipos en las dos direcciones.
+
+Lo que hay que cuidar no es el volumen: son 2.025 filas. Es que los `cuid`
+sobrevivan. Hay 986 enlaces por clave foránea, entre ellos 435 cargos bancarios que
+apuntan a su movimiento, 6 cuotas de convenio y 8 cotizaciones que apuntan a su
+cargo. Si al importar se generaran ids nuevos, el flujo seguiría cuadrando y "ya
+pagado" daría cero: el error no se vería por ninguna parte. Por eso la importación
+escribe el `id` explícito y el orden de tablas respeta las dependencias.
+
+La verificación no cuenta filas, compara cifras derivadas: el saldo de hoy, el "ya
+pagado" del mes y el flujo financiero de diciembre se calculan **recorriendo** esos
+enlaces. Si dan lo mismo en los dos motores, la conciliación llegó entera.
+
+El archivo lleva la cartola completa, los sueldos y el flujo del año. `respaldo/`
+está en `.gitignore` por lo mismo que `cartolas/`.
+
+### El motor de reglas no depende de la colación de la base
+
+En SQLite `contains` se resuelve con LIKE, que en ASCII no distingue mayúsculas. En
+PostgreSQL sí las distingue. Era el riesgo serio de la migración: que las reglas de
+clasificación dejaran de calzar en silencio.
+
+No ocurre. El motor de reglas y el calce de glosas normalizan en JavaScript
+—`normalizarTexto`: mayúsculas, sin acentos, sin puntuación— y comparan con
+`String.includes`. Nunca le preguntan a la base.
+
+Lo que sí dependía eran los dos buscadores por texto, en `/banco` y en
+`/movimientos`, donde escribir "santander" habría dejado de encontrar "PAC Seg.
+Fraude Santander". Pasan por `contiene()` de `src/lib/consulta.ts`, que agrega
+`mode: 'insensitive'` solo cuando la base es PostgreSQL: ese modificador no existe
+en el conector de SQLite y pasarlo ahí es un error de validación, así que la
+decisión se toma en tiempo de ejecución mirando `DATABASE_URL`.
+
+### El refresh token de Google caduca a los 7 días
+
+Mientras la app siga en modo **prueba** en la pantalla de consentimiento de Google,
+los refresh tokens expiran a la semana. La ingesta de Gmail va a dejar de funcionar
+cada siete días y el síntoma es un error de token inválido, no un bug de la app.
+
+Las salidas son dos: volver a entrar y autorizar cada semana, o publicar la app en
+la pantalla de consentimiento. Con un solo usuario y un scope de solo lectura la
+verificación de Google es trámite, y es lo que corresponde hacer si esto va a quedar
+funcionando solo.
+
+### Una corrida diaria, y qué hacer si se queda corta
+
+El plan Hobby de Vercel permite una sola corrida de cron al día, así que la ingesta
+de Gmail y los avisos comparten `/api/ingesta/diario` a las 12:00 UTC, que son las
+08:00 en Santiago en invierno y las 09:00 en verano. El día del mes y el día de la
+semana se calculan con `Intl` sobre `America/Santiago`: con `new Date().getDate()`
+el aviso del día 11 se dispararía el 10 por la noche la mitad del año.
+
+Si una vez al día se queda corto para Gmail, la alternativa gratuita es un workflow
+de GitHub Actions que llame al mismo endpoint cada hora. No cambia nada del código y
+el secreto vive en GitHub Secrets:
+
+```yaml
+# .github/workflows/ingesta.yml
+name: Ingesta de Gmail
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch:
+jobs:
+  ingesta:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -sS -f -X GET https://caja.japybrand.com/api/ingesta/gmail             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+```
+
+Queda anotado, no activado. GitHub no garantiza la puntualidad de los `schedule` y
+puede saltarse corridas cuando hay carga, así que sirve para refrescar seguido pero
+no para algo que deba ocurrir a una hora exacta.
+
+### `maxDuration` era del plan que no tenemos
+
+La ruta de ingesta declaraba 300 segundos, que es el tope del plan Pro. En Hobby la
+función se corta mucho antes igual, pero el número hacía creer que había margen. Está
+en 60. Si la ingesta no alcanza, la salida es bajar la ventana de días.
+
+### `/api/cron/*` también queda fuera del middleware
+
+El matcher excluía `api/ingesta`. El cron de Vercel llega sin cookie de sesión: si el
+middleware tomara la ruta, devolvería un redirect al login y la corrida diaria
+fallaría en silencio, con un 200 y una página HTML. Las dos rutas están fuera de la
+sesión **a propósito**, así que todo lo que cuelgue de ellas tiene que validar
+`CRON_SECRET` por su cuenta.
+
 ## Scripts
 
 | Comando | Qué hace |
@@ -1092,4 +1192,6 @@ sigue viviendo en `/flujo` y `/obligaciones`.
 | `npm run importar-compras` | Importa el Registro de Compras del SII y muestra el IVA. `--firme` |
 | `npm run db:seed` | Solo precarga las categorías |
 | `npm run db:studio` | Prisma Studio |
-| `npm run db:sqlite` / `db:postgres` | Cambia el provider de la base |
+| `npm run exportar-datos` | Respalda la base entera a `respaldo/`. No escribe en la base |
+| `npm run proyeccion` | Recalcula las proyecciones de oct-dic desde el gasto real. `--firme` |
+| `npm run db:sqlite` / `db:postgres` | Cambia el provider de la base, con `directUrl` en Postgres |
