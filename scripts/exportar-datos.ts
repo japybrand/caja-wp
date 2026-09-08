@@ -28,61 +28,20 @@ import { writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PrismaClient } from '@prisma/client'
+import { calcularFlujo } from '../src/lib/flujo'
+import { calcularPanel } from '../src/lib/panel'
+import { ORDEN_DE_TABLAS, FECHA_DE_CORTE, motor, type Respaldo } from './respaldo-comun'
 
 const prisma = new PrismaClient()
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CARPETA = path.join(RAIZ, 'respaldo')
 
-/**
- * El orden importa: es el mismo en que la importación tiene que insertar.
- *
- * Sale del mapa de claves foráneas del esquema. Cada tabla va después de todas las
- * que referencia, así que ninguna inserción encuentra un id que todavía no existe.
- */
-const TABLAS = [
-  // 1. Sin dependencias.
-  'categoria',
-  'cuentaGoogle',
-  'tipoCambio',
-  'sincronizacion',
-  'documentoVenta',
-  'documentoCompra',
-  'declaracionF29',
-  // 2. Depende de Categoria.
-  'proveedor',
-  // 3. Depende de Categoria y Proveedor.
-  'movimiento',
-  // 4. Dependen de Movimiento o Proveedor.
-  'valorManual',
-  'reglaClasificacion',
-  'remitenteCandidato',
-  'correoProcesado',
-  'movimientoGlobal66',
-  // 5. Depende de Movimiento y Categoria.
-  'movimientoBancario',
-  // 6. Depende de Categoria.
-  'obligacionFinanciera',
-  // 7. Dependen de ObligacionFinanciera y MovimientoBancario.
-  'cuotaObligacion',
-  'cotizacionPrevisional',
-] as const
-
-export type Tabla = (typeof TABLAS)[number]
-export const ORDEN_DE_TABLAS: readonly Tabla[] = TABLAS
-
-export interface Respaldo {
-  generadoEn: string
-  origen: string
-  /** El orden viaja con los datos: quien importe no tiene que volver a deducirlo. */
-  orden: readonly string[]
-  filas: Record<string, unknown[]>
-}
 
 async function main(): Promise<void> {
   const filas: Record<string, unknown[]> = {}
   let total = 0
 
-  for (const tabla of TABLAS) {
+  for (const tabla of ORDEN_DE_TABLAS) {
     // El cliente de Prisma expone cada modelo con su nombre en minúscula inicial.
     const modelo = prisma[tabla] as unknown as { findMany: () => Promise<unknown[]> }
     const datos = await modelo.findMany()
@@ -91,10 +50,26 @@ async function main(): Promise<void> {
     console.log(` ${tabla.padEnd(24)} ${String(datos.length).padStart(6)}`)
   }
 
+  // Las cifras derivadas se calculan AQUI, con el codigo de produccion, y viajan
+  // con el respaldo. Son la prueba de que los enlaces sobrevivieron: las tres
+  // primeras se obtienen recorriendolos, asi que un id regenerado las mueve.
+  const flujo = await calcularFlujo(2026)
+  const panel = await calcularPanel(2026, FECHA_DE_CORTE)
+  const financiero = flujo.filas.find((f) => f.clave === 'flujo_financiero')?.montos ?? []
+  const cifras = {
+    saldoHoy: panel.saldoHoy,
+    yaPagadoDelMes: panel.desglose.yaPagado,
+    egresosDelMes: panel.desglose.egresosDelMes,
+    flujoFinancieroDiciembre: financiero[11] ?? 0,
+    porRevisar: panel.porRevisar,
+    sinConciliar: panel.sinConciliar,
+  }
+
   const respaldo: Respaldo = {
     generadoEn: new Date().toISOString(),
-    origen: (process.env.DATABASE_URL ?? '').startsWith('postgres') ? 'postgresql' : 'sqlite',
-    orden: TABLAS,
+    origen: motor(),
+    orden: ORDEN_DE_TABLAS,
+    cifras,
     filas,
   }
 

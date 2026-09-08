@@ -45,7 +45,9 @@
     "cargar-f29": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/cargar-f29.ts",
     "exportar-datos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/exportar-datos.ts",
     "proyeccion": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/proyeccion-recurrentes.ts",
-    "reclasificar-ingram": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/reclasificar-ingram.ts"
+    "reclasificar-ingram": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/reclasificar-ingram.ts",
+    "importar-datos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/importar-datos.ts",
+    "verificar-migracion": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/verificar-migracion.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
