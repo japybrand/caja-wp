@@ -120,6 +120,18 @@ export interface FilaFlujo {
 export interface Flujo {
   anio: number
   filas: FilaFlujo[]
+  /**
+   * Cuanto de cada grupo YA paso por la cuenta, mes a mes.
+   *
+   * Responde "de lo que este mes hay que pagar, cuanto ya salio". No se puede sacar
+   * cruzando la cartola contra el flujo: varios pagos reales no tienen enlace por
+   * clave foranea —los envios de Global66, por ejemplo— y otros cargos del banco no
+   * son egresos del flujo. La respuesta esta en la PROCEDENCIA de cada monto, que
+   * ya se rastrea: un Movimiento de la cartola o del export ya ocurrio; uno del
+   * Excel es proyeccion. Un ValorManual con origen "banco" ya ocurrio; con origen
+   * "sii" o "calendario" es lo que hay que pagar, no lo pagado.
+   */
+  ejecutadoPorGrupo: Record<string, number[]>
   /** Total por revisar de cada mes, sumando todas las categorías. */
   pendientePorMes: number[]
   hayPendientes: boolean
@@ -128,6 +140,14 @@ export interface Flujo {
 }
 
 const CERO_12 = (): number[] => Array<number>(12).fill(0)
+
+/**
+ * Fuentes de un Movimiento que significan "esto ya paso por la cuenta".
+ *
+ * `compromiso` queda fuera a proposito: es una deuda declarada que todavia no se
+ * paga, justamente lo contrario.
+ */
+const FUENTES_EJECUTADAS = ['cartola', 'global66']
 
 /** Orden en que los grupos de subtotales aparecen dentro del flujo. */
 const ENCABEZADOS: Record<string, string> = {
@@ -149,6 +169,7 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     ventasSII,
     mesesBancarios,
     reversasBancarias,
+    movimientosEjecutados,
     f29,
     cuotasObligacion,
   ] = await Promise.all([
@@ -187,6 +208,23 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
       by: ['categoriaManualId', 'mes'],
       where: { anio, esReversa: true, categoriaManualId: { not: null } },
       _sum: { monto: true },
+    }),
+    // Lo que ya paso por la cuenta. Son DOS señales y hace falta la union:
+    //
+    //  - El movimiento nacio de la cartola o del export de Global66.
+    //  - O tiene un cargo del banco enlazado, aunque su fuente diga "excel": al
+    //    conciliar contra una proyeccion del Excel, el monto queda pagado pero la
+    //    fuente no cambia.
+    //
+    // Con solo la primera señal septiembre mostraba 4.716.020 pagados cuando el
+    // banco habia movido 8.607.116.
+    prisma.movimiento.findMany({
+      where: {
+        anio,
+        estado: 'confirmado',
+        OR: [{ fuente: { in: FUENTES_EJECUTADAS } }, { bancarios: { some: {} } }],
+      },
+      select: { categoriaId: true, mes: true, montoCLP: true },
     }),
     // F29 completo, indexado por el mes en que sale la plata.
     f29PorMesDePago(anio),
@@ -550,6 +588,22 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     for (let i = 0; i < 12; i += 1) pendientePorMes[i] = (pendientePorMes[i] ?? 0) + (montos[i] ?? 0)
   }
 
+  // --- Cuanto de cada grupo ya paso por la cuenta -------------------------
+  const grupoDe = new Map(categorias.map((c) => [c.id, c.grupo]))
+  const ejecutadoPorGrupo: Record<string, number[]> = {}
+  const sumarEjecutado = (categoriaId: string, mes: number, monto: number): void => {
+    const grupo = grupoDe.get(categoriaId)
+    if (!grupo || monto === 0) return
+    const fila = (ejecutadoPorGrupo[grupo] ??= CERO_12())
+    fila[mes - 1] = (fila[mes - 1] ?? 0) + monto
+  }
+  for (const m of movimientosEjecutados) {
+    sumarEjecutado(m.categoriaId, m.mes, m.montoCLP)
+  }
+  for (const v of valoresManuales) {
+    if (v.origen === 'banco') sumarEjecutado(v.categoriaId, v.mes, v.montoCLP)
+  }
+
   const conCartola = new Set(mesesBancarios.filter((m) => m._count._all > 0).map((m) => m.mes))
   // Un mes sin cartola y sin nada operacional cargado no es una proyeccion del
   // negocio: es solo la deuda comprometida. Se marca incompleto para que su saldo
@@ -567,6 +621,7 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
   return {
     anio,
     filas,
+    ejecutadoPorGrupo,
     pendientePorMes,
     hayPendientes: pendientePorMes.some((monto) => monto !== 0),
     naturalezaPorMes,

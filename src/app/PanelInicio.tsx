@@ -23,6 +23,7 @@ import {
   fechaEnPalabras,
   nombreMes as nombreDelMes,
 } from '@/componentes/ui'
+import { DesgloseBrecha } from './DesgloseBrecha'
 import { Grafico } from './Grafico'
 
 /**
@@ -166,6 +167,8 @@ export function PanelInicio({ panel }: { panel: Panel }) {
             </p>
           ) : null}
         </div>
+
+        <DesgloseBrecha panel={panel} />
       </Tarjeta>
 
       {/* ═══ 2. Lo urgente ════════════════════════════════════════════════ */}

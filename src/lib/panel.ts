@@ -82,6 +82,25 @@ export interface Panel {
   brechaDelMes: number
   /** true si el registro de ventas del mes esta a medias. */
   mesAMedias: boolean
+  /**
+   * De donde sale `brechaDelMes`, paso a paso.
+   *
+   * Es la cifra principal del panel y hay que poder explicarla sin abrir el codigo,
+   * asi que el desglose viaja con ella en vez de reconstruirse en la interfaz.
+   */
+  desglose: {
+    saldoInicial: number
+    movimientosHastaHoy: number
+    ingresosDelMes: number
+    yaCobrado: number
+    porCobrar: number
+    /** El valor sin el piso en cero: negativo significa que ya se cobro de mas. */
+    porCobrarCrudo: number
+    egresosPorGrupo: { grupo: string; monto: number }[]
+    egresosDelMes: number
+    yaPagado: number
+    porPagar: number
+  }
 
   /** 2. Atrasos. */
   atrasados: Vencimiento[]
@@ -144,15 +163,11 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     GRUPOS_EGRESO.reduce((a, g) => a + sumaGrupo(g.grupo, mes), 0)
 
   // ── 1. Plata de hoy y brecha del mes ───────────────────────────────────────
-  const [inicial, ultimo, entradas, salidas] = await Promise.all([
+  const [inicial, ultimo, entradas] = await Promise.all([
     prisma.valorManual.findFirst({ where: { anio, mes: 1, categoria: { grupo: 'saldo_inicial' } } }),
     prisma.movimientoBancario.findFirst({ where: { anio }, orderBy: { fecha: 'desc' } }),
     prisma.movimientoBancario.aggregate({
       where: { anio, mes: mesActual, monto: { gt: 0 } },
-      _sum: { monto: true },
-    }),
-    prisma.movimientoBancario.aggregate({
-      where: { anio, mes: mesActual, monto: { lt: 0 } },
       _sum: { monto: true },
     }),
   ])
@@ -163,11 +178,39 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
   const saldoHoy = (inicial?.montoCLP ?? 0) + (acumulado._sum.monto ?? 0)
 
   const yaCobrado = entradas._sum.monto ?? 0
-  const yaPagado = -(salidas._sum.monto ?? 0)
+
+  /**
+   * De los egresos del mes, cuanto ya paso por la cuenta.
+   *
+   * Sale de la procedencia de cada monto y no de restar los cargos del banco. Esa
+   * resta mezclaba dos universos distintos y se equivocaba en las dos direcciones:
+   * contaba gastos personales que nunca fueron egresos del flujo, y no reconocia
+   * pagos reales sin enlace por clave foranea, como los envios de Global66.
+   */
+  const yaPagado = GRUPOS_EGRESO.reduce(
+    (a, g) => a + (flujo.ejecutadoPorGrupo[g.grupo]?.[i] ?? 0),
+    0,
+  )
   const ingresosMes = fila('total_ingresos')[i] ?? 0
   const porCobrar = Math.max(ingresosMes - yaCobrado, 0)
   const porPagar = Math.max(egresosDelMes(mesActual) - yaPagado, 0)
   const brechaDelMes = saldoHoy + porCobrar - porPagar
+
+  const desglose = {
+    saldoInicial: inicial?.montoCLP ?? 0,
+    movimientosHastaHoy: acumulado._sum.monto ?? 0,
+    ingresosDelMes: ingresosMes,
+    yaCobrado,
+    porCobrar,
+    porCobrarCrudo: ingresosMes - yaCobrado,
+    egresosPorGrupo: GRUPOS_EGRESO.map((g) => ({
+      grupo: g.etiqueta,
+      monto: sumaGrupo(g.grupo, mesActual),
+    })).filter((g) => g.monto !== 0),
+    egresosDelMes: egresosDelMes(mesActual),
+    yaPagado,
+    porPagar,
+  }
 
   // ── 5. Impuestos ───────────────────────────────────────────────────────────
   const filasF29 = await f29PorMes(anio)
@@ -358,6 +401,7 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     saldoHoy,
     fechaSaldo: ultimo ? iso(ultimo.fecha) : null,
     brechaDelMes,
+    desglose,
     // El registro de ventas del mes en curso llega hasta donde el SII alcanzo a
     // registrar, asi que la proyeccion queda corta a proposito. Antes que estimar
     // desde promedios —que es lo que hacia la planilla y por eso fallaba— se avisa.
