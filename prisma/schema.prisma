@@ -1,0 +1,475 @@
+// Esquema de Caja WP.
+//
+// Portable entre SQLite (desarrollo) y PostgreSQL / Supabase (produccion) sin tocar
+// codigo de aplicacion: no usa enums de Prisma, ni listas escalares, ni tipos nativos
+// @db.*, ni Decimal. Para migrar basta cambiar el `provider` de aqui abajo y la
+// variable DATABASE_URL:  npm run db:postgres
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Filas y subgrupos del flujo de caja. Se precargan con los nombres exactos del Excel.
+model Categoria {
+  id       String  @id @default(cuid())
+  nombre   String
+  /// saldo_inicial | ingresos | financiamiento | colaboradores | proveedores | impuestos | retiros | deudas
+  grupo    String
+  orden    Int
+  /// true  -> la fila se edita mes a mes en ValorManual
+  /// false -> la fila se calcula sumando Movimientos
+  esManual Boolean @default(false)
+  /// Contexto de la fila que no se deduce de los numeros: supuestos, salvedades,
+  /// cosas pendientes de revisar con el contador.
+  nota     String  @default("")
+
+  proveedores       Proveedor[]
+  movimientos       Movimiento[]
+  valoresManuales   ValorManual[]
+  reglas            ReglaClasificacion[]
+  obligaciones      ObligacionFinanciera[]
+  bancariosManuales MovimientoBancario[]
+
+  @@unique([grupo, nombre])
+  @@index([grupo, orden])
+}
+
+model Proveedor {
+  id              String    @id @default(cuid())
+  nombre          String
+  categoriaId     String
+  categoria       Categoria @relation(fields: [categoriaId], references: [id])
+  /// Lista de correos remitentes en JSON. La fase 2 la usa para clasificar correos.
+  remitentesEmail String    @default("[]")
+  /// Glosas del banco que corresponden a este proveedor, en JSON. El banco trunca la
+  /// descripcion a ~24 caracteres ("Compra Amazon web servic"), asi que el nombre solo
+  /// no alcanza. Se aprende cuando alguien asigna un proveedor a un cargo sin conciliar.
+  aliasBancarios  String    @default("[]")
+  /// CLP | USD
+  monedaDefecto   String    @default("CLP")
+  activo          Boolean   @default(true)
+  /// Conserva el orden de las filas del Excel.
+  orden           Int       @default(0)
+
+  movimientos Movimiento[]
+  correos     CorreoProcesado[]
+  candidatos  RemitenteCandidato[]
+  reglas      ReglaClasificacion[]
+
+  @@unique([categoriaId, nombre])
+  @@index([categoriaId, orden])
+}
+
+model Movimiento {
+  id             String   @id @default(cuid())
+  fecha          DateTime
+  mes            Int
+  anio           Int
+  /// Pesos chilenos enteros. Es el valor que manda en todos los calculos.
+  montoCLP       Int
+  /// CLP | USD
+  monedaOriginal String   @default("CLP")
+  /// Espejo informativo del monto en su moneda de origen.
+  montoOriginal  Float?
+
+  proveedorId String?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+  categoriaId String
+  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
+
+  descripcion String  @default("")
+  /// excel | manual | gmail | cartola | sii
+  fuente      String
+  /// Clave estable del origen. Da idempotencia al importador y evita duplicados de Gmail.
+  idExterno   String? @unique
+  /// confirmado | por_revisar
+  estado      String  @default("confirmado")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// El correo de Gmail del que salio este movimiento, si vino de la ingesta.
+  correo    CorreoProcesado?
+  /// Cargos del banco conciliados contra este movimiento.
+  bancarios MovimientoBancario[]
+  /// Envios de Global66 que dieron origen a este movimiento.
+  global66  MovimientoGlobal66[]
+
+  @@index([anio, mes])
+  @@index([categoriaId, anio, mes])
+  @@index([proveedorId, anio, mes])
+  @@index([estado])
+}
+
+// ===========================================================================
+// Fase 2: ingesta desde Gmail
+// ===========================================================================
+
+/// Cuenta de Google que autoriza el acceso a Gmail para toda la aplicacion.
+/// El refresh token va cifrado con AES-256-GCM usando ENCRYPTION_KEY.
+model CuentaGoogle {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  refreshTokenCifrado String
+  scope               String
+  actualizadoEn       DateTime @updatedAt
+  creadoEn            DateTime @default(now())
+}
+
+/// Un correo que la ingesta ya miro. gmailId unico: no se procesa dos veces.
+model CorreoProcesado {
+  id        String   @id @default(cuid())
+  gmailId   String   @unique
+  threadId  String?
+  remitente String
+  asunto    String
+  fecha     DateTime
+  /// procesado | sin_monto | error | ignorado
+  estado    String
+
+  proveedorId  String?
+  proveedor    Proveedor?  @relation(fields: [proveedorId], references: [id])
+  movimientoId String?     @unique
+  movimiento   Movimiento? @relation(fields: [movimientoId], references: [id], onDelete: SetNull)
+
+  /// JSON crudo que devolvio el modelo, para la bandeja de revision.
+  respuestaModelo String?
+  detalleError    String?
+  procesadoEn     DateTime @default(now())
+
+  @@index([estado])
+  @@index([fecha])
+  @@index([proveedorId])
+}
+
+/// Candidatos que salieron de "Buscar remitentes en Gmail". Nada llega a
+/// Proveedor.remitentesEmail hasta que una persona lo aprueba.
+model RemitenteCandidato {
+  id            String    @id @default(cuid())
+  proveedorId   String
+  proveedor     Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+  email         String
+  nombreDe      String?
+  cantidad      Int
+  asuntoEjemplo String
+  ultimoCorreo  DateTime
+  /// propuesto | aprobado | descartado
+  estado        String    @default("propuesto")
+  buscadoEn     DateTime  @default(now())
+
+  @@unique([proveedorId, email])
+  @@index([proveedorId, estado])
+}
+
+/// Dolar observado por dia, cacheado desde mindicador.cl.
+model TipoCambio {
+  id          String   @id @default(cuid())
+  moneda      String
+  /// Dia que se pidio.
+  fecha       DateTime
+  valorCLP    Float
+  /// Dia que realmente publico mindicador (fin de semana o feriado -> habil anterior).
+  fechaFuente DateTime
+  creadoEn    DateTime @default(now())
+
+  @@unique([moneda, fecha])
+}
+
+/// Registro de cada corrida de ingesta, para saber que hizo.
+model Sincronizacion {
+  id            String    @id @default(cuid())
+  /// cron | manual
+  origen        String
+  iniciadaEn    DateTime  @default(now())
+  terminadaEn   DateTime?
+  correosVistos Int       @default(0)
+  creados       Int       @default(0)
+  porRevisar    Int       @default(0)
+  sinMonto      Int       @default(0)
+  errores       Int       @default(0)
+  detalleError  String?
+
+  @@index([iniciadaEn])
+}
+
+/// Filas del flujo que se editan por mes y no provienen de movimientos individuales:
+/// saldo inicial de enero, ventas, financiamiento, impuestos y deudas.
+model ValorManual {
+  id          String    @id @default(cuid())
+  categoriaId String
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+  mes         Int
+  anio        Int
+  montoCLP    Int
+  /// De donde salio el valor: excel | banco.
+  ///
+  /// El importador solo pisa los que dicen "excel". Sin esto, cada `npm run importar`
+  /// borraria en silencio todo lo corregido con la cartola: el saldo inicial real de
+  /// enero volveria a cero, los pagos de F21 desaparecerian y el giro de mayo del
+  /// Fogape volveria a los 4.000.000 de la proyeccion.
+  origen      String    @default("excel")
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([categoriaId, anio, mes])
+  @@index([anio, mes])
+}
+
+/// Regla editable para clasificar un cargo de la cartola.
+///
+/// Un mismo texto del banco puede corresponder a cosas contablemente distintas: la
+/// transferencia a MOLINA OVALLE por 1.500.000 es remuneracion y la de 1.000.000 es
+/// retiro, y el banco las describe igual. El monto desempata.
+///
+/// Precedencia: gana la regla con `montoExacto` que calce; si no hay ninguna, la
+/// regla del mismo patron sin monto. Si el patron calza pero no hay ni monto que
+/// coincida ni regla general, el cargo queda SIN CONCILIAR para que lo decida una
+/// persona.
+model ReglaClasificacion {
+  id          String @id @default(cuid())
+  /// Texto que debe aparecer en la descripcion del cargo. Sin distinguir
+  /// mayusculas ni acentos.
+  patron      String
+  /// Monto exacto en pesos. Null = la regla vale para cualquier monto que calce el patron.
+  montoExacto Int?
+
+  categoriaId String
+  categoria   Categoria  @relation(fields: [categoriaId], references: [id])
+  proveedorId String?
+  proveedor   Proveedor? @relation(fields: [proveedorId], references: [id])
+
+  nota          String   @default("")
+  activa        Boolean  @default(true)
+  creadaEn      DateTime @default(now())
+  actualizadaEn DateTime @updatedAt
+
+  /// Ojo: `montoExacto` es nullable, y Prisma no acepta null en el `where` de un
+  /// indice compuesto. Para buscar la regla general de un patron hay que usar
+  /// findFirst({ where: { patron, montoExacto: null } }), no findUnique ni upsert.
+  @@unique([patron, montoExacto])
+  @@index([activa])
+}
+
+// ===========================================================================
+// Fase 4: Registro de Ventas del SII
+// ===========================================================================
+
+/// Un documento del Registro de Compras y Ventas (RCV) del SII.
+///
+/// Tipos: 33 factura afecta, 34 factura exenta, 61 nota de credito. Las 33 y 34
+/// suman, las 61 restan.
+///
+/// El tipo 48 (comprobante de pago electronico) NO viene en el detalle: el SII lo
+/// entrega solo como resumen mensual, y es la causa de las diferencias chicas
+/// contra la planilla.
+model DocumentoVenta {
+  id              String   @id @default(cuid())
+  tipoDocumento   Int
+  folio           String
+  rutCliente      String
+  razonSocial     String
+  fechaDocto      DateTime
+  montoExento     Int
+  montoNeto       Int
+  montoIVA        Int
+  montoTotal      Int
+  /// El periodo sale del nombre del archivo, no del contenido del CSV.
+  mes             Int
+  anio            Int
+  archivoOrigen   String
+  /// A que documento apunta una nota de credito. Sin esto, una 61 es un monto
+  /// suelto: con esto se ve que anula.
+  tipoReferencia  Int?
+  folioReferencia String?
+  importadoEn     DateTime @default(now())
+
+  @@unique([tipoDocumento, folio])
+  @@index([anio, mes])
+  @@index([rutCliente])
+}
+
+// ===========================================================================
+// Fase 3: cartola bancaria
+// ===========================================================================
+
+/// Una linea de la cartola. Es lo que dice el banco, y NO entra al flujo por si
+/// misma: al flujo entran los Movimiento. La conciliacion solo enlaza las dos.
+///
+/// Esto importa: el banco trae 132 millones de cargos en nueve meses y la app
+/// tiene 86, porque el banco incluye impuestos, deudas, tarjeta de credito y
+/// gastos personales. Si importar creara movimientos, el flujo se duplicaria.
+model MovimientoBancario {
+  id            String   @id @default(cuid())
+  fecha         DateTime
+  mes           Int
+  anio          Int
+  /// Negativo para cargos, positivo para abonos. Pesos enteros.
+  monto         Int
+  descripcion   String
+  nDocumento    String   @default("")
+  sucursal      String   @default("")
+  /// C = cargo, A = abono
+  tipo          String
+  banco         String   @default("Santander")
+  cuenta        String
+  archivoOrigen String
+  /// sha256(banco|cuenta|fecha|monto|descripcion|nDocumento|ordinal). El ordinal
+  /// separa filas identicas del mismo archivo: hay 16 casos reales.
+  hash          String   @unique
+
+  /// sin_conciliar | conciliado | ignorado
+  estadoConciliacion String                 @default("sin_conciliar")
+  movimientoId       String?
+  movimiento         Movimiento?            @relation(fields: [movimientoId], references: [id], onDelete: SetNull)
+  /// regla | alias | nombre | monto_mes | manual
+  viaConciliacion    String                 @default("")
+  notaConciliacion   String                 @default("")
+  /// Proveedor que se identifico, aunque no haya movimiento al que enlazar.
+  proveedorSugerido  String?
+  /// Fila manual del flujo a la que se asigno este cargo. Sin esto no hay forma de
+  /// saber que un abono resto de una fila de egreso: el ValorManual es un solo
+  /// numero por mes y la reversa quedaria invisible.
+  categoriaManualId  String?
+  categoriaManual    Categoria?             @relation(fields: [categoriaManualId], references: [id])
+  /// true cuando es un abono asignado a una fila de egreso, o sea una reversa.
+  esReversa          Boolean                @default(false)
+  /// Cuota de convenio o cotizacion previsional que este movimiento pago.
+  cuotasObligacion   CuotaObligacion[]
+  cotizacion         CotizacionPrevisional?
+
+  importadoEn DateTime @default(now())
+
+  @@index([anio, mes])
+  @@index([estadoConciliacion])
+  @@index([tipo])
+  @@index([movimientoId])
+}
+
+/// Compromiso de pago con cuotas fijas y calendario conocido: los convenios de la
+/// Tesoreria y la linea Fogape. Se modelan juntos porque la pregunta que importa
+/// es la misma, cuanta deuda fija hay que pagar cada mes, y separarlos obligaria
+/// a unir dos fuentes en cada pantalla. El campo `tipo` mantiene la distincion.
+model ObligacionFinanciera {
+  id               String     @id @default(cuid())
+  /// convenio_tgr | linea_credito
+  tipo             String
+  institucion      String
+  /// Numero de resolucion del convenio, o identificador de la linea.
+  numero           String
+  /// 20.780 | ProPyme | Fogape. Texto libre: manana puede haber otra ley.
+  marco            String
+  fechaActivacion  DateTime
+  cuotaMensual     Int
+  fechaUltimaCuota DateTime
+  /// Cuotas comprometidas que la institucion todavia no emite.
+  cuotasPorGenerar Int        @default(0)
+  activa           Boolean    @default(true)
+  /// Fila del flujo que esta obligacion alimenta. Desde el primer mes con cuota, el
+  /// calendario manda sobre el ValorManual que dejo la planilla.
+  categoriaId      String?
+  categoria        Categoria? @relation(fields: [categoriaId], references: [id])
+  nota             String     @default("")
+
+  cuotas CuotaObligacion[]
+
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([institucion, numero])
+  @@index([tipo])
+}
+
+/// Una cuota concreta. Se materializan en vez de calcularse al vuelo para poder
+/// marcarlas pagadas y enlazarlas al cargo del banco que las pago.
+model CuotaObligacion {
+  id                   String               @id @default(cuid())
+  obligacionId         String
+  obligacion           ObligacionFinanciera @relation(fields: [obligacionId], references: [id], onDelete: Cascade)
+  anio                 Int
+  mes                  Int
+  monto                Int
+  /// por_generar | pendiente | pagada | atrasada
+  estado               String               @default("pendiente")
+  /// Sin @unique a proposito: un solo cargo puede pagar varias cuotas. El pago
+  /// del 07/09/2026 por 431.398 cubrio la cuota de septiembre de dos convenios.
+  movimientoBancarioId String?
+  movimientoBancario   MovimientoBancario?  @relation(fields: [movimientoBancarioId], references: [id], onDelete: SetNull)
+  nota                 String               @default("")
+
+  @@unique([obligacionId, anio, mes])
+  @@index([anio, mes])
+  @@index([estado])
+}
+
+/// Cotizaciones previsionales. Van aparte de las obligaciones porque no son un
+/// compromiso con calendario cerrado: nacen cada mes con la remuneracion, y lo
+/// que se sabe de ellas es el periodo, no una cuota pactada.
+model CotizacionPrevisional {
+  id                   String              @id @default(cuid())
+  /// El periodo que se cotiza, NO el mes en que se paga: la de mayo se pago el 05/06.
+  anioPeriodo          Int
+  mesPeriodo           Int
+  /// Lo que efectivamente salio de la cuenta corriente. Hasta mayo de 2026 incluye
+  /// a Cristian Andres ademas de Felipe; desde junio es practicamente solo Felipe.
+  monto                Int
+  /// Lo que certifica Previred por Felipe Molina. La diferencia contra `monto` es
+  /// lo cotizado por el resto de los trabajadores del periodo.
+  montoCertificado     Int                 @default(0)
+  /// pagada | atrasada | pendiente
+  estado               String              @default("pendiente")
+  fechaPago            DateTime?
+  /// Solo tiene sentido mientras esta pendiente.
+  fechaVencimiento     DateTime?
+  movimientoBancarioId String?             @unique
+  movimientoBancario   MovimientoBancario? @relation(fields: [movimientoBancarioId], references: [id], onDelete: SetNull)
+  nota                 String              @default("")
+
+  @@unique([anioPeriodo, mesPeriodo])
+  @@index([estado])
+}
+
+/// Movimiento de la cuenta Global66, desde el export de la plataforma.
+///
+/// Se persiste igual que la cartola de Santander y por la misma razon: sin el, el
+/// reparto de los pagos internacionales entre colaboradores hay que estimarlo, y la
+/// estimacion se equivoca justo en los meses en que no alcanzo para todos.
+model MovimientoGlobal66 {
+  id            String   @id @default(cuid())
+  fecha         DateTime
+  mes           Int
+  anio          Int
+  /// envio | comision | conversion | costo_cambio | otro
+  tipo          String
+  /// Texto original del tipo, que trae el nombre del destinatario pegado.
+  tipoOriginal  String
+  /// USD que salen de la cuenta.
+  debitado      Float
+  /// USD que entran a la cuenta.
+  acreditado    Float
+  /// Costo del cambio, en pesos.
+  costoCambio   Int      @default(0)
+  /// Pesos por dolar de la conversion.
+  tipoCambio    Float    @default(0)
+  /// Destinatario del envio, tal como lo escribe Global66.
+  tercero       String   @default("")
+  /// En un envio, el id de la transaccion de su comision.
+  idFees        String   @default("")
+  idTransaccion String   @default("")
+  comentario    String   @default("")
+  archivoOrigen String
+  /// sha256 del contenido de la fila. Da idempotencia al importador.
+  hash          String   @unique
+
+  /// Movimiento del flujo que se creo desde este envio.
+  movimientoId String?
+  movimiento   Movimiento? @relation(fields: [movimientoId], references: [id], onDelete: SetNull)
+
+  importadoEn DateTime @default(now())
+
+  @@index([anio, mes])
+  @@index([tipo])
+}

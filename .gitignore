@@ -1,0 +1,29 @@
+node_modules/
+.next/
+out/
+build/
+.env
+.env*.local
+.env.local
+*.db
+*.db-journal
+prisma/dev.db*
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# Cartolas bancarias: movimientos reales, nunca se versionan.
+cartolas/
+*.xls
+*.xlsx
+# La planilla de origen NO se versiona: trae sueldos, montos de proveedores y el
+# flujo completo del ano. Es el mismo dato que las cartolas. Si algun dia hace falta
+# tenerla en el repo, se saca esta linea a proposito y sabiendo lo que contiene.
+Flujo_de_Caja_2026_-_Japybrand_WP.xlsx
+
+# Registro de Compras y Ventas del SII: datos tributarios reales.
+sii/
+
+# Export de movimientos de la cuenta Global66: pagos a colaboradores.
+global66/
