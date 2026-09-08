@@ -320,10 +320,18 @@ async function importar(): Promise<{ resumen: Resumen; libro: ExcelJS.Workbook }
 
         const previo = await prisma.movimiento.findUnique({ where: { idExterno } })
 
-        // Un movimiento que ya se reemplazo por el monto real de la cartola NO se
-        // pisa con la proyeccion del Excel. Los montos del Excel eran una proyeccion
-        // anual; la cartola es lo que efectivamente paso por la cuenta.
-        if (previo?.fuente === 'cartola') {
+        // Un movimiento cuya fuente ya no es el Excel NO se pisa con la proyeccion
+        // de la planilla. Los montos del Excel eran una proyeccion anual; cualquier
+        // otra fuente es una correccion deliberada y vale mas:
+        //
+        //  - 'cartola' es lo que efectivamente paso por la cuenta.
+        //  - 'manual' es una proyeccion recalculada desde el gasto real, como los
+        //    octubre a diciembre que arrastraban un valor copiado de febrero.
+        //
+        // Antes el guardia nombraba solo a 'cartola' y una reimportacion habria
+        // devuelto a Verpex sus 233.511 sin avisar. `celdasFueraDeComparacion` ya
+        // usa el mismo criterio, asi que la cuadratura tampoco vuelve a compararlas.
+        if (previo && previo.fuente !== 'excel') {
           resumen.protegidos += 1
           continue
         }
