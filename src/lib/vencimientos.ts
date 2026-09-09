@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { MESES } from '@/lib/dominio'
+import { MESES, tipoObligacion } from '@/lib/dominio'
 import type { F29DelMes } from '@/lib/sii/f29'
 
 /**
@@ -27,15 +27,6 @@ export interface Vencimiento {
 
 const iso = (d: Date): string => d.toISOString().slice(0, 10)
 
-/**
- * El día del mes en que vence cada obligación.
- *
- * La línea de crédito se cobra a principios de mes y los convenios de Tesorería a
- * fin de mes. Ninguna de las dos trae la fecha exacta en su calendario, así que se
- * deduce del tipo.
- */
-const DIA_DE_VENCIMIENTO = { linea_credito: 5, convenio_tgr: 30 } as const
-
 export async function vencimientosHasta({
   hoy,
   hasta,
@@ -54,17 +45,17 @@ export async function vencimientosHasta({
     include: { obligacion: true },
   })
   for (const c of cuotas) {
-    const esFogape = c.obligacion.tipo === 'linea_credito'
-    const dia = esFogape ? DIA_DE_VENCIMIENTO.linea_credito : DIA_DE_VENCIMIENTO.convenio_tgr
-    const vence = new Date(Date.UTC(c.anio, c.mes - 1, dia, 12))
+    // El día de vencimiento y el nombre salen del tipo, que los centraliza. Ninguna
+    // obligación trae la fecha exacta en su calendario: se deduce de cuándo cobra
+    // cada acreedor.
+    const tipo = tipoObligacion(c.obligacion.tipo)
+    const vence = new Date(Date.UTC(c.anio, c.mes - 1, tipo.diaDeVencimiento, 12))
     if (vence > hasta) continue
     todos.push({
       clave: `cuota:${c.id}`,
       fecha: iso(vence),
       dias: dias(vence),
-      concepto: esFogape
-        ? `Cuota Fogape de ${MESES[c.mes - 1]?.toLowerCase()}`
-        : `Convenio TGR ${c.obligacion.numero}`,
+      concepto: `${tipo.nombre(c.obligacion)}, ${MESES[c.mes - 1]?.toLowerCase()}`,
       accion: 'Paga la cuota',
       monto: c.monto,
       vencido: vence < hoy,

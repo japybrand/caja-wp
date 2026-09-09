@@ -105,3 +105,42 @@ export function escribirRemitentes(lista: string[]): string {
   const limpia = lista.map((x) => x.trim().toLowerCase()).filter((x) => x.length > 0)
   return JSON.stringify([...new Set(limpia)])
 }
+
+/**
+ * Los tipos de obligación con calendario cerrado, y lo que cada uno necesita.
+ *
+ * Antes esto vivía repartido en siete lugares: la etiqueta en dos componentes, el
+ * día de vencimiento y el nombre de la cuota en `vencimientos.ts`, y filtros por
+ * tipo en `panel.ts`. Agregar un tipo obligaba a encontrarlos todos, y el que se
+ * olvidara fallaba en silencio: una obligación de tipo desconocido se habría
+ * mostrado como "Convenio TGR" con el número equivocado.
+ *
+ * `diaDeVencimiento` sale de cuándo cobra cada acreedor: la línea de crédito a
+ * principios de mes, los convenios de Tesorería a fin de mes, y los acuerdos de
+ * pago a mediados, que es cuando se han cobrado los cheques de Inmotion.
+ */
+export const TIPOS_OBLIGACION = {
+  convenio_tgr: {
+    etiqueta: 'Convenio',
+    diaDeVencimiento: 30,
+    /** Cómo se nombra una cuota suya en un aviso o en una lista. */
+    nombre: (o: { institucion: string; numero: string }) => `Convenio TGR ${o.numero}`,
+  },
+  linea_credito: {
+    etiqueta: 'Línea de crédito',
+    diaDeVencimiento: 5,
+    nombre: (o: { institucion: string; numero: string }) => `Cuota Fogape ${o.institucion}`,
+  },
+  acuerdo_pago: {
+    etiqueta: 'Acuerdo de pago',
+    diaDeVencimiento: 15,
+    nombre: (o: { institucion: string; numero: string }) => `Acuerdo ${o.institucion}`,
+  },
+} as const
+
+export type TipoObligacion = keyof typeof TIPOS_OBLIGACION
+
+/** Los datos de un tipo, con respaldo para el caso de un tipo que no exista. */
+export function tipoObligacion(tipo: string): (typeof TIPOS_OBLIGACION)[TipoObligacion] {
+  return TIPOS_OBLIGACION[tipo as TipoObligacion] ?? TIPOS_OBLIGACION.convenio_tgr
+}

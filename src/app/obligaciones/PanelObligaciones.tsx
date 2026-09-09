@@ -1,13 +1,11 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Landmark, Users } from 'lucide-react'
 import type { EstadoObligaciones } from '@/lib/obligaciones'
+import { tipoObligacion } from '@/lib/dominio'
 import { Cifra, Marca, Pagina, Tarjeta, Vacio, clp } from '@/componentes/ui'
 import { TablaF29 } from './TablaF29'
 import { PendientesDePago } from './PendientesDePago'
 
-const ETIQUETA_TIPO: Record<string, string> = {
-  convenio_tgr: 'Convenio',
-  linea_credito: 'Línea de crédito',
-}
+
 
 export function PanelObligaciones({
   estado,
@@ -92,7 +90,7 @@ export function PanelObligaciones({
                         {o.institucion} {o.numero}
                       </span>
                       <span className="ml-2 text-[11.5px] text-suave">
-                        {ETIQUETA_TIPO[o.tipo] ?? o.tipo}
+                        {tipoObligacion(o.tipo).etiqueta}
                       </span>
                     </td>
                     <td className="text-tenue">{o.marco}</td>

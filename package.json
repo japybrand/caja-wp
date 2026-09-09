@@ -54,7 +54,8 @@
     "migrar:datos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/importar-datos.ts",
     "migrar:verificar": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/verificar-migracion.ts",
     "migrar:push": "node --env-file-if-exists=.env.produccion scripts/prisma-produccion.mjs db push",
-    "preparar-vercel": "node scripts/preparar-vercel.mjs"
+    "preparar-vercel": "node scripts/preparar-vercel.mjs",
+    "acuerdos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/cargar-acuerdos-pago.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

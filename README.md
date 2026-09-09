@@ -1062,8 +1062,16 @@ sigue viviendo en `/flujo` y `/obligaciones`.
 
 ## Fase 8: producción
 
-Supabase para la base, Vercel para la app, Resend para los avisos. El dominio es
-`caja.japybrand.com`.
+En producción desde el 09/09/2026 en **https://caja-wp.vercel.app**: Supabase para
+la base, Vercel para la app y para el cron, Resend para los avisos. Cada push a
+`main` redespliega solo.
+
+El redirect `https://caja-wp.vercel.app/api/auth/callback/google` ya está autorizado
+en Google Cloud, junto con el de `localhost:3000` para desarrollo.
+
+**Los datos son de producción y no hay respaldo local en caliente.** Todo script que
+escriba simula por omisión y solo aplica con `--firme`, y el resultado de la
+simulación se revisa antes.
 
 ### Las variables de Vercel se arman, no se copian a mano
 
@@ -1300,7 +1308,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          curl -sS -f -X GET https://caja.japybrand.com/api/ingesta/gmail             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          curl -sS -f -X GET https://caja-wp.vercel.app/api/ingesta/diario \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
 ```
 
 Queda anotado, no activado. GitHub no garantiza la puntualidad de los `schedule` y

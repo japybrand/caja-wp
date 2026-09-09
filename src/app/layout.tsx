@@ -21,6 +21,22 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Caja WP · Japybrand WP',
   description: 'Flujo de caja de Japybrand WP',
+  /**
+   * Fuera de los buscadores, en todas las páginas.
+   *
+   * El `robots.txt` pide no rastrear; esta cabecera pide no indexar, que no es lo
+   * mismo: una URL enlazada desde otro sitio se puede indexar sin rastrearla, y ahí
+   * el robots.txt no alcanza. Las dos cosas juntas cubren los dos caminos.
+   *
+   * `nocache` y `noimageindex` van dentro de googleBot porque son directivas
+   * propias de Google y no forman parte del estándar.
+   */
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false, noimageindex: true },
+  },
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

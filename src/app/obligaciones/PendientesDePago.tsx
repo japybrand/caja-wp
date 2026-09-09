@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Undo2 } from 'lucide-react'
 import type { EstadoObligaciones } from '@/lib/obligaciones'
-import { MESES } from '@/lib/dominio'
+import { MESES, tipoObligacion } from '@/lib/dominio'
 import { Tarjeta, clp } from '@/componentes/ui'
 import { marcarCotizacionPagada, marcarCuotaPagada } from './acciones-pago'
 
@@ -52,8 +52,7 @@ export function PendientesDePago({ estado, hoy }: { estado: EstadoObligaciones; 
   const items: Item[] = []
 
   for (const o of estado.obligaciones) {
-    const nombre =
-      o.tipo === 'linea_credito' ? `Cuota Fogape ${o.institucion}` : `Convenio TGR ${o.numero}`
+    const nombre = tipoObligacion(o.tipo).nombre(o)
     for (const c of o.cuotas) {
       const orden = c.anio * 12 + c.mes
       if (orden > ahora) continue

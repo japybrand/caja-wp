@@ -332,11 +332,20 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
       atrasado: false,
     })
   }
-  for (const o of obligaciones.filter((x) => x.tipo === 'linea_credito')) {
+  // Todo lo que no sea convenio va con su propia línea: los convenios se agrupan
+  // porque son cuatro con el mismo acreedor, pero una línea de crédito y un acuerdo
+  // de pago son deudas distintas con acreedores distintos. El filtro se escribe por
+  // exclusión para que un tipo nuevo aparezca en la lista en vez de desaparecer.
+  for (const o of obligaciones.filter((x) => x.tipo !== 'convenio_tgr')) {
     const ultima = o.cuotas.reduce((max, c) => Math.max(max, c.anio * 12 + c.mes), 0)
+    const saldo = saldoDe(o)
+    if (saldo === 0) continue
     deudas.push({
-      quien: `${o.institucion}, línea ${o.marco}`,
-      monto: saldoDe(o),
+      quien:
+        o.tipo === 'linea_credito'
+          ? `${o.institucion}, línea ${o.marco}`
+          : `${o.institucion}, acuerdo de pago`,
+      monto: saldo,
       detalle: `hasta ${MESES_CORTOS[(ultima % 12) - 1 < 0 ? 11 : (ultima % 12) - 1]?.toLowerCase()} ${Math.floor(ultima / 12)}`,
       atrasado: false,
     })
