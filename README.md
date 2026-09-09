@@ -1273,8 +1273,17 @@ describen un hecho —el día 11, una cuota concreta— no se repiten nunca; los
 describen una situación que persiste se repiten cada siete días mientras dure. Un
 envío fallido no cuenta como avisado, así que se reintenta al día siguiente.
 
-Las obligaciones van en un correo cada una y no en un resumen: cada una se paga en
-su plataforma, y juntarlas obligaría a releer el mismo correo para ir tachando.
+Las obligaciones van **juntas en un correo**, ordenadas por fecha. La primera versión
+mandaba uno por obligación y no escalaba: el 25 de septiembre habrían salido diez, y
+cuatro eran los cuatro convenios que vencen el mismo día. Diez correos en una mañana
+se archivan sin leer, que es justo lo que este sistema existe para evitar.
+
+Cuando hay una sola, el asunto la nombra como antes: agrupar no debe volver más vago
+el caso simple.
+
+El aviso agrupado se manda si hay **al menos una obligación que no se haya avisado
+antes**, y después registra todas. Así entrar algo nuevo dispara un correo con el
+panorama completo, y marcar cosas como pagadas no dispara ninguno.
 
 `npm run probar-alertas -- --fecha 2026-10-11` imprime lo que saldría ese día sin
 mandar nada. Tres de las cuatro reglas dependen del calendario, así que sin poder

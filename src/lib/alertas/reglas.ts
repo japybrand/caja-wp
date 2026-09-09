@@ -21,6 +21,16 @@ import type { Aviso } from '@/lib/correo/plantilla'
 export interface Regla {
   tipo: string
   clave: string
+  /**
+   * Los hechos concretos que cubre el aviso, cuando son varios.
+   *
+   * Un correo por obligación se volvía ruido: el 25 de septiembre habrían salido
+   * diez, cuatro de ellos los cuatro convenios que vencen el mismo día. Agrupados,
+   * el aviso se manda si hay AL MENOS UNO que no se haya avisado antes, y después
+   * se registran todos. Así entrar algo nuevo dispara un correo con el panorama
+   * completo, y marcar cosas como pagadas no dispara ninguno.
+   */
+  claves?: string[]
   /** 0 = se avisa una sola vez. >0 = se repite cada tantos días mientras dure. */
   repetirCadaDias: number
   aviso: Aviso
@@ -143,34 +153,101 @@ export async function cartolaAtrasada(hoy: Date): Promise<Regla | null> {
   }
 }
 
-/** 3. Obligaciones que vencen dentro de los próximos cinco días. */
-export async function obligacionesPorVencer(hoy: Date): Promise<Regla[]> {
+/**
+ * 3. Todo lo que vence dentro de los próximos cinco días, en UN correo.
+ *
+ * POR QUÉ AGRUPADO
+ * Un correo por obligación no escalaba: el 25 de septiembre habrían salido diez, y
+ * cuatro eran los cuatro convenios que vencen el mismo día por 1.966.905 en total.
+ * Diez correos en una mañana se archivan sin leer, que es exactamente lo que este
+ * sistema tiene que evitar. Uno solo, ordenado por fecha, se lee entero.
+ *
+ * Cuando hay una sola obligación el correo la nombra en el asunto, igual que antes:
+ * agrupar no debe hacer más vago el caso simple.
+ */
+export async function obligacionesPorVencer(hoy: Date): Promise<Regla | null> {
   const { anio, mes } = enSantiago(hoy)
   const hasta = new Date(hoy.getTime() + VENTANA_VENCIMIENTOS_DIAS * 86_400_000)
 
   const filas = await f29PorMes(anio)
   const f29 = filas.find((f) => f.mesDePago.anio === anio && f.mesDePago.mes === mes) ?? null
   const vencimientos = await vencimientosHasta({ hoy, hasta, f29 })
-  if (vencimientos.length === 0) return []
+  if (vencimientos.length === 0) return null
 
-  // Un aviso por obligación y no uno con todas: cada una se paga por su lado y en
-  // su plataforma, así que juntarlas obligaría a releer el mismo correo varias
-  // veces para ir tachando. La clave por obligación es además lo que evita que la
-  // misma cuota avise cinco días seguidos.
-  return vencimientos.map((v) => ({
+  const total = vencimientos.reduce((a, v) => a + v.monto, 0)
+  const atrasados = vencimientos.filter((v) => v.vencido)
+  const proximos = vencimientos.filter((v) => !v.vencido)
+
+  // Ya vienen ordenados por fecha desde `vencimientosHasta`, que es el orden en que
+  // hay que actuar: lo más viejo primero.
+  const filasAviso = vencimientos.map((v) => ({
+    concepto: v.concepto,
+    detalle: v.vencido
+      ? `venció el ${v.fecha}`
+      : v.dias === 0
+        ? `vence hoy, ${v.fecha}`
+        : `vence el ${v.fecha}, en ${v.dias} ${v.dias === 1 ? 'día' : 'días'}`,
+    monto: clp(v.monto),
+  }))
+
+  if (vencimientos.length === 1) {
+    const v = vencimientos[0]!
+    return {
+      tipo: 'obligacion',
+      clave: v.clave,
+      claves: [v.clave],
+      repetirCadaDias: 0,
+      aviso: {
+        asunto: `Caja WP · ${v.concepto} ${v.vencido ? 'está atrasado' : `vence en ${v.dias} días`}`,
+        encabezado: v.vencido
+          ? `${v.concepto} venció el ${v.fecha} y sigue pendiente: ${clp(v.monto)}.`
+          : `${v.concepto} vence el ${v.fecha}, en ${v.dias} días: ${clp(v.monto)}.`,
+        explicacion: v.accion + '.',
+        ruta: '/obligaciones',
+        textoBoton: 'Ver obligaciones',
+      },
+    }
+  }
+
+  // La concordancia se arma explícitamente. Un correo que dice "1 obligaciones
+  // atrasadas" se lee como generado por una máquina, y lo que se busca acá es que se
+  // lea como escrito por alguien que sabe lo que está pasando.
+  const obligaciones = (n: number): string => (n === 1 ? '1 obligación' : `${n} obligaciones`)
+  const atrasadas = (n: number): string =>
+    n === 1 ? '1 obligación atrasada' : `${n} obligaciones atrasadas`
+
+  const asunto =
+    atrasados.length === 0
+      ? `Caja WP · vencen ${obligaciones(proximos.length)} por ${clp(total)}`
+      : proximos.length === 0
+        ? `Caja WP · ${atrasadas(atrasados.length)} por ${clp(total)}`
+        : `Caja WP · ${obligaciones(vencimientos.length)} por ${clp(total)}: ${atrasados.length} atrasadas`
+
+  const encabezado =
+    atrasados.length === 0
+      ? `Vencen ${obligaciones(proximos.length)} en los próximos ${VENTANA_VENCIMIENTOS_DIAS} días, ${clp(total)} en total.`
+      : proximos.length === 0
+        ? `Hay ${atrasadas(atrasados.length)}, ${clp(total)} en total.`
+        : `${clp(total)} entre ${atrasadas(atrasados.length)} y ${proximos.length === 1 ? 'una que vence' : `${proximos.length} que vencen`} dentro de ${VENTANA_VENCIMIENTOS_DIAS} días.`
+
+  return {
     tipo: 'obligacion',
-    clave: v.clave,
+    // La clave principal es solo para el registro; el que decide si se manda es
+    // `claves`, y basta que una sea nueva.
+    clave: `tanda:${vencimientos[0]?.fecha}`,
+    claves: vencimientos.map((v) => v.clave),
     repetirCadaDias: 0,
     aviso: {
-      asunto: `Caja WP · ${v.concepto} ${v.vencido ? 'está atrasado' : `vence en ${v.dias} días`}`,
-      encabezado: v.vencido
-        ? `${v.concepto} venció el ${v.fecha} y sigue pendiente: ${clp(v.monto)}.`
-        : `${v.concepto} vence el ${v.fecha}, en ${v.dias} días: ${clp(v.monto)}.`,
-      explicacion: v.accion + '.',
+      asunto,
+      encabezado,
+      explicacion:
+        'En orden de fecha, que es el orden en que hay que pagarlas. Márcalas en ' +
+        'Obligaciones apenas pagues, sin esperar a que el cargo llegue a la cartola.',
+      filas: filasAviso,
       ruta: '/obligaciones',
       textoBoton: 'Ver obligaciones',
     },
-  }))
+  }
 }
 
 /**
@@ -222,5 +299,5 @@ export async function evaluarAlertas(hoy: Date): Promise<Regla[]> {
     obligacionesPorVencer(hoy),
     bandejaEstancada(hoy),
   ])
-  return [carga, cartola, ...obligaciones, bandeja].filter((r): r is Regla => r !== null)
+  return [carga, cartola, obligaciones, bandeja].filter((r): r is Regla => r !== null)
 }

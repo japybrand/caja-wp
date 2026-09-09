@@ -41,21 +41,32 @@ export async function ejecutarAlertas({
       })
     }
 
-    if (await yaSeAviso(regla.tipo, regla.clave, regla.repetirCadaDias)) {
+    // Un aviso agrupado cubre varios hechos. Se manda si hay AL MENOS UNO que no se
+    // haya avisado antes, y después se registran todos: así entrar algo nuevo dispara
+    // un correo con el panorama completo, y marcar cosas como pagadas no dispara
+    // ninguno. Con un solo hecho, el comportamiento es el de siempre.
+    const claves = regla.claves ?? [regla.clave]
+    const nuevas: string[] = []
+    for (const clave of claves) {
+      if (!(await yaSeAviso(regla.tipo, clave, regla.repetirCadaDias))) nuevas.push(clave)
+    }
+    if (nuevas.length === 0) {
       resultado.omitidos += 1
       anota('ya avisado')
       continue
     }
     if (seco) {
       resultado.enviados += 1
-      anota('se enviaría')
+      anota(`se enviaría (${nuevas.length} de ${claves.length} sin avisar)`)
       continue
     }
 
     const { ok, error } = await enviarCorreo(componer(regla.aviso))
     // El registro guarda también los fallos: `yaSeAviso` no los cuenta como
     // avisados, así que el aviso se reintenta al día siguiente en vez de perderse.
-    await registrarAviso(regla.tipo, regla.clave, regla.aviso.asunto, error)
+    for (const clave of claves) {
+      await registrarAviso(regla.tipo, clave, regla.aviso.asunto, error)
+    }
     if (ok) {
       resultado.enviados += 1
       anota('enviado')
