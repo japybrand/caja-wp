@@ -1065,6 +1065,30 @@ sigue viviendo en `/flujo` y `/obligaciones`.
 Supabase para la base, Vercel para la app, Resend para los avisos. El dominio es
 `caja.japybrand.com`.
 
+### Las variables de Vercel se arman, no se copian a mano
+
+`npm run preparar-vercel` escribe `.env.vercel` con las quince variables de
+producción: las que se copian de `.env.local`, las que se generan nuevas y las que
+faltan por completar. El panel de Vercel acepta pegar un `.env` entero en
+*Settings → Environment Variables → Import .env*, así que es un solo pegado en vez
+de quince campos.
+
+**Ningún valor sale por pantalla**: el script imprime los nombres, el largo y de
+dónde viene cada uno. Un secreto impreso en la terminal queda en el scrollback, en
+el historial del shell y en la transcripción de la conversación, que son tres
+lugares más de los que hacen falta para algo que ya está en un archivo del disco.
+`.env.vercel` está en `.gitignore` y se borra apenas se pega.
+
+Dos que no son intercambiables:
+
+- **`AUTH_SECRET` y `CRON_SECRET` se generan nuevos.** No se comparte el secreto de
+  desarrollo con producción: si el de desarrollo se filtra alguna vez, no debe
+  servir para firmar sesiones reales ni para disparar el cron.
+- **`ENCRYPTION_KEY` tiene que ser la MISMA.** Cifra el refresh token de Gmail que
+  viaja en la migración. Con otra clave el token no se puede descifrar y hay que
+  volver a autorizar el acceso a Gmail, que en modo prueba caduca cada siete días de
+  todas formas.
+
 ### La clave de producción vive en un archivo aparte
 
 Los scripts cargan `--env-file=.env.local --env-file=.env`, y en Node **el último
@@ -1298,6 +1322,7 @@ sesión **a propósito**, así que todo lo que cuelgue de ellas tiene que valida
 | `npm run importar-compras` | Importa el Registro de Compras del SII y muestra el IVA. `--firme` |
 | `npm run db:seed` | Solo precarga las categorías |
 | `npm run db:studio` | Prisma Studio |
+| `npm run preparar-vercel` | Arma `.env.vercel` para pegar en Vercel. No imprime valores |
 | `npm run migrar:probar` | Comprueba la conexión con Supabase. No escribe nada |
 | `npm run migrar:push` | Crea las tablas en Supabase con DIRECT_URL |
 | `npm run migrar:datos` | Importa el respaldo a Supabase. `--firme` para aplicar |

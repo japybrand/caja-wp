@@ -42,6 +42,10 @@ Flujo_de_Caja_2026_-_Japybrand_WP.xlsx
 # `.env*.local` ya cubre este nombre, pero se anota explicito para que se vea.
 /.env.produccion
 
+# Volcado de variables para pegar en Vercel. Lleva todos los secretos juntos:
+# se genera, se pega y se borra.
+/.env.vercel
+
 # Respaldos de la base en JSON, para migrar entre SQLite y Postgres.
 # Llevan la cartola completa, los sueldos y el flujo entero: es el mismo dato que
 # /cartolas/. Nunca se versionan.
