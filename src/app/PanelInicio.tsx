@@ -124,7 +124,7 @@ export function PanelInicio({ panel }: { panel: Panel }) {
     >
       {/* ═══ 1. El estado de la caja ══════════════════════════════════════ */}
       <Tarjeta variante="principal">
-        <div className="grid gap-e5 lg:grid-cols-[1.1fr_1fr_1fr] lg:gap-e6">
+        <div className="grid gap-e5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] lg:gap-e6">
           <Cifra
             rotulo="Tienes hoy"
             valor={clp(saldoHoy)}
@@ -185,7 +185,7 @@ export function PanelInicio({ panel }: { panel: Panel }) {
             : 'nada atrasado'
         }
       >
-        <div className="grid gap-e3 lg:grid-cols-[1fr_1fr]">
+        <div className="grid gap-e3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           {atrasados.length > 0 ? (
             <Tarjeta
               variante="urgente"
@@ -253,7 +253,7 @@ export function PanelInicio({ panel }: { panel: Panel }) {
 
       {/* ═══ 3. El panorama ═══════════════════════════════════════════════ */}
       <Zona titulo="El panorama del mes">
-        <div className="grid gap-e3 lg:grid-cols-3">
+        <div className="grid gap-e3 lg:grid-cols-[repeat(3,minmax(0,1fr))]">
           <Tarjeta titulo="Impuestos" icono={BadgePercent}>
             {f29 ? (
               <>
@@ -322,8 +322,8 @@ export function PanelInicio({ panel }: { panel: Panel }) {
               {costos.map((c) => (
                 <div key={c.concepto}>
                   <div className="mb-1 flex items-baseline justify-between gap-e2">
-                    <span className="text-[12.5px]">{c.concepto}</span>
-                    <span className="cifra text-[12.5px] whitespace-nowrap">
+                    <span className="min-w-0 truncate text-[12.5px]">{c.concepto}</span>
+                    <span className="cifra shrink-0 text-[12.5px] whitespace-nowrap">
                       {clp(c.monto)}
                       <span className="ml-1.5 text-suave">{c.porcentaje.toFixed(0)}%</span>
                     </span>
@@ -352,58 +352,59 @@ export function PanelInicio({ panel }: { panel: Panel }) {
             }
           >
             {/*
-              Dos cifras y no una: el saldo solo cuenta la mitad de la historia. Con
-              un año de pagos encima, 28 millones de convenio suenan igual el primer
-              mes que el décimo, y no es lo mismo. El avance es lo que distingue una
-              deuda que se está pagando de una que no se mueve.
+              QUÉ FALTA ARRIBA, CUÁNTO SE AVANZÓ ABAJO
+              El saldo solo cuenta la mitad de la historia: 28 millones de convenio
+              suenan igual el primer mes que el décimo. Pero el dato que se busca al
+              mirar esta tarjeta sigue siendo cuánto falta, así que el avance va como
+              contexto y no como una segunda cifra que compita por el espacio.
+
+              Sin tabla, a propósito. La tarjeta ocupa un tercio del ancho de la
+              página —unos 300 px— y cuatro columnas de montos no caben ahí: los
+              nombres se partían en tres líneas y la tabla desbordaba la tarjeta. Dos
+              filas por compromiso entran holgadas y es el mismo patrón que ya usa
+              "Qué te cuesta más" al lado.
             */}
-            <div className="grid grid-cols-2 gap-e4">
-              <Cifra rotulo="Falta pagar" valor={clp(totalDeuda)} />
-              <Cifra rotulo="Ya pagado" valor={clp(totalPagadoDeuda)} tono="positivo" />
-            </div>
+            <Cifra
+              valor={clp(totalDeuda)}
+              explica={`${avanceTotal}% ya pagado de ${clp(totalComprometido)} comprometidos`}
+            />
             <div className="mt-e3">
               <Barra porcentaje={avanceTotal} />
-              <p className="t-apoyo mt-e2">
-                {avanceTotal}% de {clp(totalComprometido)} comprometidos en total.
-              </p>
             </div>
 
-            <table className="tabla mt-e4 border-t border-linea">
-              <thead>
-                <tr>
-                  <th className="!pl-0">Compromiso</th>
-                  <th className="text-right">Total</th>
-                  <th className="text-right">Pagado</th>
-                  <th className="!pr-0 text-right">Falta</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deudas.map((d, i) => (
-                  <tr key={i}>
-                    <td className="!pl-0">
-                      <div>{d.quien}</div>
-                      <div className="t-apoyo">
-                        {d.detalle}
-                        {d.conCalendario ? ` · ${d.avance}% pagado` : ' · sin historial de cuotas'}
-                      </div>
-                    </td>
-                    <td className="monto text-tenue">{clp(d.total)}</td>
-                    <td className="monto text-tenue">{d.pagado === 0 ? '·' : clp(d.pagado)}</td>
-                    <td className={'monto !pr-0 ' + (d.atrasado ? 'text-negativo' : '')}>
+            <div className="mt-e4 space-y-e3 border-t border-linea pt-e4">
+              {deudas.map((d, i) => (
+                <div key={i}>
+                  <div className="mb-1 flex items-baseline justify-between gap-e2">
+                    <span className="min-w-0 truncate text-[12.5px]">{d.quien}</span>
+                    <span
+                      className={
+                        'cifra shrink-0 text-[12.5px] whitespace-nowrap ' +
+                        (d.atrasado ? 'text-negativo' : '')
+                      }
+                    >
                       {clp(d.monto)}
-                    </td>
-                  </tr>
-                ))}
-                <tr className="font-medium">
-                  <td className="!pl-0">Total</td>
-                  <td className="monto">{clp(totalComprometido)}</td>
-                  <td className="monto">{clp(totalPagadoDeuda)}</td>
-                  <td className="monto !pr-0">{clp(totalDeuda)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="t-apoyo mt-e3">
-              Cada mes se van {clp(cuotaFijaMensual)} solo en cuotas.
+                    </span>
+                  </div>
+                  <Barra porcentaje={d.avance} />
+                  <div className="t-apoyo mt-1 flex justify-between gap-e2">
+                    <span className="min-w-0 truncate">
+                      {d.conCalendario
+                        ? `${clp(d.pagado)} de ${clp(d.total)}`
+                        : 'sin historial de cuotas'}
+                    </span>
+                    <span className="shrink-0">
+                      {d.conCalendario ? `${d.avance}% · ` : ''}
+                      {d.detalle}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="t-apoyo mt-e4 border-t border-linea pt-e3">
+              Llevas {clp(totalPagadoDeuda)} pagados. Cada mes se van{' '}
+              {clp(cuotaFijaMensual)} solo en cuotas.
             </p>
           </Tarjeta>
         </div>
@@ -414,7 +415,7 @@ export function PanelInicio({ panel }: { panel: Panel }) {
         <div className="zona-detalle pt-e4">
           {/* El gráfico y la comparación van juntos: la comparación explica el
               último tramo de la curva, y sola dejaba media columna vacía. */}
-          <div className="grid gap-e5 lg:grid-cols-[2fr_1fr]">
+          <div className="grid gap-e5 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div>
               <h3 className="t-tarjeta">Ingresos y egresos por mes</h3>
               <p className="t-apoyo mt-1 mb-e3 max-w-[70ch]">

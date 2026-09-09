@@ -20,8 +20,20 @@ import { clp, fechaEnPalabras } from '@/componentes/ui'
  * proveedor abriendo la fila— el número se comprueba leyendo, sin abrir el código.
  */
 
-/** Concepto a la izquierda, tres montos a la derecha. Los cuatro niveles se alinean. */
+/**
+ * Concepto a la izquierda, tres montos a la derecha. Los cuatro niveles se alinean.
+ *
+ * Las tres columnas de monto son fijas —6,5rem cada una— para que grupo, categoría y
+ * proveedor queden en la misma vertical. Eso hace que el bloque tenga un ancho mínimo
+ * y no quepa en un teléfono, así que va dentro de un contenedor que hace scroll
+ * horizontal por su cuenta. Encoger las columnas habría sido peor: los montos se
+ * partirían en dos líneas y se perdería la alineación, que es lo único que hace
+ * verificable el desglose.
+ */
 const REJILLA = 'grid grid-cols-[minmax(0,1fr)_6.5rem_6.5rem_6.5rem] items-baseline gap-x-e2'
+
+/** Ancho bajo el cual las columnas de monto ya no alcanzan. */
+const ANCHO_MINIMO = 'min-w-[420px]'
 
 /** Un cero se lee como dato; un punto se lee como "aquí no queda nada". */
 function Monto({ valor, apagado }: { valor: number; apagado?: boolean }) {
@@ -173,21 +185,27 @@ export function DesgloseBrecha({ panel }: { panel: Panel }) {
         </table>
 
         {/* Los egresos, con las tres columnas en cada nivel. */}
-        <div className="mt-e5">
+        <div className="mt-e5 overflow-x-auto">
           <div
-            className={REJILLA + ' t-rotulo border-b border-acento-linea pb-e2 !text-claro-suave'}
+            className={
+              REJILLA + ` ${ANCHO_MINIMO} t-rotulo border-b border-acento-linea pb-e2 !text-claro-suave`
+            }
           >
             <span>Egresos de {mes}</span>
             <span className="monto">Del mes</span>
             <span className="monto">Ya pagado</span>
             <span className="monto">Falta</span>
           </div>
-          <div className="mt-e2 text-[12.5px]">
+          <div className={`mt-e2 ${ANCHO_MINIMO} text-[12.5px]`}>
             {d.egresos.map((g) => (
               <Grupo key={g.clave} grupo={g} />
             ))}
           </div>
-          <div className={REJILLA + ' border-t border-acento-linea pt-e2 text-[12.5px] font-medium'}>
+          <div
+            className={
+              REJILLA + ` ${ANCHO_MINIMO} border-t border-acento-linea pt-e2 text-[12.5px] font-medium`
+            }
+          >
             <span>Total de {mes}</span>
             <Monto valor={d.egresosDelMes} />
             <Monto valor={d.yaPagado} />
