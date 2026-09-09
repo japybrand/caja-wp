@@ -92,6 +92,8 @@ export function PanelInicio({ panel }: { panel: Panel }) {
     totalCostos,
     deudas,
     totalDeuda,
+    totalComprometido,
+    totalPagadoDeuda,
     cuotaFijaMensual,
     hasta,
     barras,
@@ -101,6 +103,9 @@ export function PanelInicio({ panel }: { panel: Panel }) {
     sinConciliar,
   } = panel
 
+
+  const avanceTotal =
+    totalComprometido === 0 ? 0 : Math.round((totalPagadoDeuda / totalComprometido) * 100)
   const alcanza = falta === 0
   const mes = nombreMes.toLowerCase()
   const mayorCosto = Math.max(...costos.map((c) => c.monto), 1)
@@ -346,20 +351,55 @@ export function PanelInicio({ panel }: { panel: Panel }) {
               </Link>
             }
           >
-            <Cifra valor={clp(totalDeuda)} explica="convenios, crédito y colaboradores" />
-            <table className="tabla mt-e3 border-t border-linea">
+            {/*
+              Dos cifras y no una: el saldo solo cuenta la mitad de la historia. Con
+              un año de pagos encima, 28 millones de convenio suenan igual el primer
+              mes que el décimo, y no es lo mismo. El avance es lo que distingue una
+              deuda que se está pagando de una que no se mueve.
+            */}
+            <div className="grid grid-cols-2 gap-e4">
+              <Cifra rotulo="Falta pagar" valor={clp(totalDeuda)} />
+              <Cifra rotulo="Ya pagado" valor={clp(totalPagadoDeuda)} tono="positivo" />
+            </div>
+            <div className="mt-e3">
+              <Barra porcentaje={avanceTotal} />
+              <p className="t-apoyo mt-e2">
+                {avanceTotal}% de {clp(totalComprometido)} comprometidos en total.
+              </p>
+            </div>
+
+            <table className="tabla mt-e4 border-t border-linea">
+              <thead>
+                <tr>
+                  <th className="!pl-0">Compromiso</th>
+                  <th className="text-right">Total</th>
+                  <th className="text-right">Pagado</th>
+                  <th className="!pr-0 text-right">Falta</th>
+                </tr>
+              </thead>
               <tbody>
                 {deudas.map((d, i) => (
                   <tr key={i}>
                     <td className="!pl-0">
                       <div>{d.quien}</div>
-                      <div className="t-apoyo">{d.detalle}</div>
+                      <div className="t-apoyo">
+                        {d.detalle}
+                        {d.conCalendario ? ` · ${d.avance}% pagado` : ' · sin historial de cuotas'}
+                      </div>
                     </td>
+                    <td className="monto text-tenue">{clp(d.total)}</td>
+                    <td className="monto text-tenue">{d.pagado === 0 ? '·' : clp(d.pagado)}</td>
                     <td className={'monto !pr-0 ' + (d.atrasado ? 'text-negativo' : '')}>
                       {clp(d.monto)}
                     </td>
                   </tr>
                 ))}
+                <tr className="font-medium">
+                  <td className="!pl-0">Total</td>
+                  <td className="monto">{clp(totalComprometido)}</td>
+                  <td className="monto">{clp(totalPagadoDeuda)}</td>
+                  <td className="monto !pr-0">{clp(totalDeuda)}</td>
+                </tr>
               </tbody>
             </table>
             <p className="t-apoyo mt-e3">

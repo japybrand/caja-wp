@@ -1,7 +1,7 @@
 import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Landmark, Users } from 'lucide-react'
 import type { EstadoObligaciones } from '@/lib/obligaciones'
 import { tipoObligacion } from '@/lib/dominio'
-import { Cifra, Marca, Pagina, Tarjeta, Vacio, clp } from '@/componentes/ui'
+import { Barra, Cifra, Marca, Pagina, Tarjeta, Vacio, clp } from '@/componentes/ui'
 import { TablaF29 } from './TablaF29'
 import { PendientesDePago } from './PendientesDePago'
 
@@ -17,6 +17,21 @@ export function PanelObligaciones({
   const { obligaciones, calendario, cotizaciones, totales, cotizacionesAtrasadas } = estado
   const { compromisos, totalCompromisos, f29, totalF29 } = estado
   const anioF29 = f29[0]?.anioPeriodo ?? new Date().getFullYear()
+
+  /**
+   * Cuánto se lleva pagado de una obligación, en porcentaje.
+   *
+   * Se calcula sobre el total comprometido, no sobre las cuotas emitidas: las que
+   * la institución todavía no emite son parte del compromiso igual, y dejarlas
+   * fuera inflaría el avance de los convenios largos.
+   */
+  const avance = (o: { totalComprometido: number; saldo: number }): number =>
+    o.totalComprometido === 0
+      ? 0
+      : Math.round(((o.totalComprometido - o.saldo) / o.totalComprometido) * 100)
+  const comprometidoTotal = totales.pagado + totales.pendiente + totales.porGenerar
+  const avanceTotal =
+    comprometidoTotal === 0 ? 0 : Math.round((totales.pagado / comprometidoTotal) * 100)
   const f29Incompletos = f29.filter((f) => !f.completo || f.sinDesglosar > 0).length
 
   return (
@@ -76,10 +91,11 @@ export function PanelObligaciones({
                   <th>Marco</th>
                   <th>Activado</th>
                   <th className="!text-right">Cuota</th>
-                  <th className="!text-right">Pagadas</th>
-                  <th className="!text-right">Pendientes</th>
+                  <th className="!text-right">Total</th>
+                  <th className="!text-right">Pagado</th>
+                  <th className="!text-right">Falta</th>
+                  <th>Avance</th>
                   <th>Última</th>
-                  <th className="!text-right">Saldo</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,23 +112,45 @@ export function PanelObligaciones({
                     <td className="text-tenue">{o.marco}</td>
                     <td className="cifra text-tenue">{o.fechaActivacion}</td>
                     <td className="monto">{clp(o.cuotaMensual)}</td>
-                    <td className="monto text-tenue">{o.pagadas}</td>
-                    <td className="monto">
-                      {o.pendientes}
-                      {o.porGenerar > 0 ? (
-                        <span className="ml-1.5 text-[11.5px] font-normal text-suave">
-                          +{o.porGenerar} por generar
-                        </span>
-                      ) : null}
+                    <td className="monto text-tenue">{clp(o.totalComprometido)}</td>
+                    <td className="monto text-tenue">
+                      {clp(o.totalComprometido - o.saldo)}
+                      <div className="t-apoyo">{o.pagadas} cuotas</div>
+                    </td>
+                    <td className="monto font-medium text-negativo">
+                      {clp(o.saldo)}
+                      <div className="t-apoyo !text-tenue">
+                        {o.pendientes} cuotas
+                        {o.porGenerar > 0 ? ` +${o.porGenerar} por generar` : ''}
+                      </div>
+                    </td>
+                    {/* La barra pesa más que el porcentaje solo: cinco obligaciones
+                        con avances distintos se comparan de un vistazo, y el número
+                        exacto queda al lado para quien lo necesite. */}
+                    <td className="w-[110px]">
+                      <Barra porcentaje={avance(o)} />
+                      <div className="t-apoyo mt-1">{avance(o)}%</div>
                     </td>
                     <td className="cifra text-tenue">
                       {o.ultimoMes
                         ? `${String(o.ultimoMes.mes).padStart(2, '0')}/${o.ultimoMes.anio}`
                         : '—'}
                     </td>
-                    <td className="monto font-medium text-negativo">{clp(o.saldo)}</td>
                   </tr>
                 ))}
+                <tr className="font-medium">
+                  <td colSpan={3}>Todas las obligaciones</td>
+                  <td className="monto">{clp(totales.pagado + totales.pendiente + totales.porGenerar)}</td>
+                  <td className="monto">{clp(totales.pagado)}</td>
+                  <td className="monto text-negativo">
+                    {clp(totales.pendiente + totales.porGenerar)}
+                  </td>
+                  <td className="w-[110px]">
+                    <Barra porcentaje={avanceTotal} />
+                    <div className="t-apoyo mt-1">{avanceTotal}%</div>
+                  </td>
+                  <td />
+                </tr>
               </tbody>
             </table>
           </div>

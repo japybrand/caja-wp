@@ -56,7 +56,8 @@
     "migrar:push": "node --env-file-if-exists=.env.produccion scripts/prisma-produccion.mjs db push",
     "preparar-vercel": "node scripts/preparar-vercel.mjs",
     "acuerdos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/cargar-acuerdos-pago.ts",
-    "respaldo": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/exportar-datos.ts"
+    "respaldo": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/exportar-datos.ts",
+    "inmotion-historial": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/completar-calendario-inmotion.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

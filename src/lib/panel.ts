@@ -28,7 +28,28 @@ export type { Vencimiento } from '@/lib/vencimientos'
 
 export interface Deuda {
   quien: string
+  /** Lo que falta por pagar. Es el número que manda. */
   monto: number
+  /**
+   * Todo lo que costará el compromiso de principio a fin, y cuánto se lleva pagado.
+   *
+   * Con un año de pagos encima, el saldo cuenta la mitad de la historia: 28 millones
+   * de convenio suenan igual el primer mes que el décimo, y no es lo mismo. Estos dos
+   * campos son los que permiten leer el avance.
+   */
+  total: number
+  pagado: number
+  /** De 0 a 100. */
+  avance: number
+  /**
+   * Si la deuda tiene calendario con historial de cuotas.
+   *
+   * Las que no lo tienen —la deuda declarada con colaboradores, una cotización
+   * atrasada— salen con avance 0, que es literalmente cierto: de ESA deuda no se ha
+   * pagado nada. Pero conviene distinguirlas de un convenio recién partido, porque
+   * el cero significa cosas distintas.
+   */
+  conCalendario: boolean
   detalle: string
   atrasado: boolean
 }
@@ -150,6 +171,9 @@ export interface Panel {
   /** 7. A quien le debo. */
   deudas: Deuda[]
   totalDeuda: number
+  /** El compromiso completo y lo que va pagado, sumando todas las líneas. */
+  totalComprometido: number
+  totalPagadoDeuda: number
   cuotaFijaMensual: number
 
   /** Detalle de abajo. */
@@ -321,13 +345,26 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
   const saldoDe = (o: (typeof obligaciones)[number]): number =>
     o.cuotas.filter((c) => c.estado !== 'pagada').reduce((a, c) => a + c.monto, 0)
 
+  const totalDe = (o: (typeof obligaciones)[number]): number =>
+    o.cuotas.reduce((a, c) => a + c.monto, 0)
+  const pagadoDe = (o: (typeof obligaciones)[number]): number =>
+    o.cuotas.filter((c) => c.estado === 'pagada').reduce((a, c) => a + c.monto, 0)
+  const avance = (pagado: number, total: number): number =>
+    total === 0 ? 0 : Math.round((pagado / total) * 100)
+
   if (convenios.length > 0) {
     const ultimoMes = convenios
       .flatMap((o) => o.cuotas)
       .reduce((max, c) => Math.max(max, c.anio * 12 + c.mes), 0)
+    const total = convenios.reduce((a, o) => a + totalDe(o), 0)
+    const pagado = convenios.reduce((a, o) => a + pagadoDe(o), 0)
     deudas.push({
       quien: `Tesorería, ${convenios.length} convenios`,
       monto: convenios.reduce((a, o) => a + saldoDe(o), 0),
+      total,
+      pagado,
+      avance: avance(pagado, total),
+      conCalendario: true,
       detalle: `hasta ${MESES_CORTOS[(ultimoMes % 12) - 1 < 0 ? 11 : (ultimoMes % 12) - 1]?.toLowerCase()} ${Math.floor(ultimoMes / 12)}`,
       atrasado: false,
     })
@@ -340,12 +377,18 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     const ultima = o.cuotas.reduce((max, c) => Math.max(max, c.anio * 12 + c.mes), 0)
     const saldo = saldoDe(o)
     if (saldo === 0) continue
+    const total = totalDe(o)
+    const pagado = pagadoDe(o)
     deudas.push({
       quien:
         o.tipo === 'linea_credito'
           ? `${o.institucion}, línea ${o.marco}`
           : `${o.institucion}, acuerdo de pago`,
       monto: saldo,
+      total,
+      pagado,
+      avance: avance(pagado, total),
+      conCalendario: true,
       detalle: `hasta ${MESES_CORTOS[(ultima % 12) - 1 < 0 ? 11 : (ultima % 12) - 1]?.toLowerCase()} ${Math.floor(ultima / 12)}`,
       atrasado: false,
     })
@@ -357,9 +400,14 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
   })
   if (compromisos.length > 0) {
     const mesSalida = compromisos[0]?.mes ?? mesActual
+    const monto = compromisos.reduce((a, m) => a + m.montoCLP, 0)
     deudas.push({
       quien: 'Colaboradores',
-      monto: compromisos.reduce((a, m) => a + m.montoCLP, 0),
+      monto,
+      total: monto,
+      pagado: 0,
+      avance: 0,
+      conCalendario: false,
       detalle: `sale en ${MESES[mesSalida - 1]?.toLowerCase()}`,
       atrasado: false,
     })
@@ -368,12 +416,18 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     deudas.push({
       quien: `Cotización de ${MESES[c.mesPeriodo - 1]?.toLowerCase()}`,
       monto: c.monto,
+      total: c.monto,
+      pagado: 0,
+      avance: 0,
+      conCalendario: false,
       detalle: 'atrasada',
       atrasado: true,
     })
   }
   deudas.sort((a, b) => b.monto - a.monto)
   const totalDeuda = deudas.reduce((a, d) => a + d.monto, 0)
+  const totalComprometido = deudas.reduce((a, d) => a + d.total, 0)
+  const totalPagadoDeuda = deudas.reduce((a, d) => a + d.pagado, 0)
 
   const cuotasProximoMes = await prisma.cuotaObligacion.findMany({
     where: { anio, mes: Math.min(mesActual + 1, 12), obligacion: { activa: true } },
@@ -448,6 +502,8 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     totalCostos,
     deudas,
     totalDeuda,
+    totalComprometido,
+    totalPagadoDeuda,
     cuotaFijaMensual,
     barras,
     deficit,
