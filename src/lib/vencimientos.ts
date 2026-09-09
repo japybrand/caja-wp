@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { MESES, tipoObligacion } from '@/lib/dominio'
+import { MESES, fechaVencimientoCuota, tipoObligacion } from '@/lib/dominio'
 import type { F29DelMes } from '@/lib/sii/f29'
 
 /**
@@ -49,7 +49,7 @@ export async function vencimientosHasta({
     // obligación trae la fecha exacta en su calendario: se deduce de cuándo cobra
     // cada acreedor.
     const tipo = tipoObligacion(c.obligacion.tipo)
-    const vence = new Date(Date.UTC(c.anio, c.mes - 1, tipo.diaDeVencimiento, 12))
+    const vence = fechaVencimientoCuota(c.obligacion.tipo, c.anio, c.mes)
     if (vence > hasta) continue
     todos.push({
       clave: `cuota:${c.id}`,

@@ -116,13 +116,18 @@ export function escribirRemitentes(lista: string[]): string {
  * mostrado como "Convenio TGR" con el número equivocado.
  *
  * `diaDeVencimiento` sale de cuándo cobra cada acreedor: la línea de crédito a
- * principios de mes, los convenios de Tesorería a fin de mes, y los acuerdos de
- * pago a mediados, que es cuando se han cobrado los cheques de Inmotion.
+ * principios de mes, los convenios de Tesorería el último día del mes, y los
+ * acuerdos de pago a mediados, que es cuando se han cobrado los cheques de Inmotion.
+ *
+ * 'fin_de_mes' no es un 30 disfrazado: el último día del mes son 28, 29, 30 o 31
+ * según cuál sea. Con un 30 fijo, la cuota de febrero vencía el 30 de febrero, una
+ * fecha que no existe y que JavaScript convierte en marzo, así que el aviso habría
+ * llegado dos días tarde y el vencimiento se mostraría con el mes equivocado.
  */
 export const TIPOS_OBLIGACION = {
   convenio_tgr: {
     etiqueta: 'Convenio',
-    diaDeVencimiento: 30,
+    diaDeVencimiento: 'fin_de_mes',
     /** Cómo se nombra una cuota suya en un aviso o en una lista. */
     nombre: (o: { institucion: string; numero: string }) => `Convenio TGR ${o.numero}`,
   },
@@ -141,6 +146,26 @@ export const TIPOS_OBLIGACION = {
 export type TipoObligacion = keyof typeof TIPOS_OBLIGACION
 
 /** Los datos de un tipo, con respaldo para el caso de un tipo que no exista. */
-export function tipoObligacion(tipo: string): (typeof TIPOS_OBLIGACION)[TipoObligacion] {
+export function tipoObligacion(tipo: string): {
+  etiqueta: string
+  diaDeVencimiento: number | 'fin_de_mes'
+  nombre: (o: { institucion: string; numero: string }) => string
+} {
   return TIPOS_OBLIGACION[tipo as TipoObligacion] ?? TIPOS_OBLIGACION.convenio_tgr
+}
+
+/**
+ * Cuándo vence la cuota de un mes.
+ *
+ * El día 0 del mes siguiente es el último del mes pedido, y así el cálculo sirve
+ * para febrero y para los años bisiestos sin ninguna tabla de por medio.
+ *
+ * Mediodía UTC y no medianoche: las fechas de la cartola están a medianoche y las
+ * comparaciones entre ambas ya fallaron una vez por unas horas de diferencia.
+ */
+export function fechaVencimientoCuota(tipo: string, anio: number, mes: number): Date {
+  const dia = tipoObligacion(tipo).diaDeVencimiento
+  return dia === 'fin_de_mes'
+    ? new Date(Date.UTC(anio, mes, 0, 12))
+    : new Date(Date.UTC(anio, mes - 1, dia, 12))
 }
