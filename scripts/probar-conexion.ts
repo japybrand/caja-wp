@@ -17,7 +17,25 @@
  * dice cuál de las tres es. Este script las distingue.
  */
 
+import { readFileSync } from 'node:fs'
 import { PrismaClient } from '@prisma/client'
+
+/**
+ * El provider que declara prisma/schema.prisma ahora mismo.
+ *
+ * Hace falta porque el cliente de Prisma se genera contra un provider concreto: con
+ * el esquema en `sqlite` y una URL de Postgres, el error que sale es "the URL must
+ * start with the protocol file:", que suena a que la URL está mal cuando en realidad
+ * falta cambiar el esquema. Detectarlo aquí evita perder el rato revisando la clave.
+ */
+function providerDelEsquema(): string {
+  try {
+    const texto = readFileSync('prisma/schema.prisma', 'utf-8')
+    return /datasource\s+db\s*\{[^}]*?provider\s*=\s*"([^"]+)"/.exec(texto)?.[1] ?? '?'
+  } catch {
+    return '?'
+  }
+}
 
 const clp = (n: number): string =>
   new Intl.NumberFormat('es-CL', { maximumFractionDigits: 0 }).format(n)
@@ -61,6 +79,18 @@ async function main(): Promise<void> {
     console.log('\nFalta crear .env.produccion. Copia la plantilla y pon tu clave:')
     console.log('  cp .env.produccion.example .env.produccion')
     console.log('\nEstá en .gitignore, así que no se versiona.')
+    process.exitCode = 1
+    return
+  }
+
+  const provider = providerDelEsquema()
+  console.log(`  ${'esquema'.padEnd(13)} provider = ${provider}`)
+  if (provider !== 'postgresql') {
+    console.log('\nEL ESQUEMA TODAVÍA ESTÁ EN SQLITE.')
+    console.log('La conexión no se puede probar hasta cambiarlo, porque el cliente de')
+    console.log('Prisma se genera contra un provider concreto. Corre:')
+    console.log('\n  npm run db:postgres && npx prisma generate\n')
+    console.log('Se vuelve atrás con:  npm run db:sqlite && npx prisma generate')
     process.exitCode = 1
     return
   }
