@@ -1089,6 +1089,37 @@ Dos que no son intercambiables:
   volver a autorizar el acceso a Gmail, que en modo prueba caduca cada siete días de
   todas formas.
 
+### La migración quedó verificada el 09/09/2026
+
+2.024 filas, 18 tablas, 933 enlaces por clave foránea y las seis cifras derivadas:
+28 comprobaciones, todas correctas. PostgreSQL 17.6 en São Paulo.
+
+Dos comprobaciones que solo se pueden hacer con los datos ya en Postgres:
+
+- **Los campos de texto llegaron intactos.** 14.054 campos comparados contra el
+  respaldo, cero diferencias, incluidos los seis proveedores con acento o ñ
+  —Cabify Envíos, Mantención Débito Santander, Trizrán Zamora, Cristián Andrés,
+  Damián Moreno, Carlos Millán—. Los 3.016 campos de fecha, comparados como ISO,
+  también coinciden: no se corrió ninguna hora.
+- **El helper de mayúsculas no era teórico.** Buscar "amazon" en minúscula encuentra
+  8 cargos con `contiene()` y **0** con el `contains` crudo; "verpex" 56 contra 0;
+  "transf a molina" 34 contra 0. En SQLite las tres daban lo mismo con o sin helper.
+  Ese era exactamente el error silencioso que había que evitar.
+
+### Después de migrar, el entorno local necesita un paso
+
+`prisma/schema.prisma` queda con `provider = "postgresql"`, que es lo que Vercel
+necesita para construir. Con el `DATABASE_URL` local todavía en `file:./dev.db`,
+Prisma se niega a arrancar: el provider y la URL no coinciden.
+
+Para volver a trabajar contra la copia local:
+
+    npm run db:sqlite && npx prisma generate
+
+Y para volver a producción, lo mismo con `db:postgres`. El `dev.db` y los respaldos
+en JSON siguen intactos: lo único que cambia es contra qué motor se genera el
+cliente.
+
 ### La clave de producción vive en un archivo aparte
 
 Los scripts cargan `--env-file=.env.local --env-file=.env`, y en Node **el último

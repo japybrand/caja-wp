@@ -10,8 +10,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // El pooler de Supabase, puerto 6543. Es el que usa la aplicacion.
+  url       = env("DATABASE_URL")
+  // Conexion directa, puerto 5432. Solo para db push y migrate.
+  directUrl = env("DIRECT_URL")
 }
 
 /// Filas y subgrupos del flujo de caja. Se precargan con los nombres exactos del Excel.

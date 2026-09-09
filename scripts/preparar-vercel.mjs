@@ -32,8 +32,19 @@ function leer(ruta) {
 const local = { ...leer('.env'), ...leer('.env.local') }
 const produccion = leer('.env.produccion')
 
-/** 32 bytes al azar, que es lo que piden Auth.js y el guardia del cron. */
-const secreto = () => randomBytes(32).toString('base64')
+// Lo que ya se genero antes, si el archivo existe.
+const anterior = leer('.env.vercel')
+
+/**
+ * 32 bytes al azar, que es lo que piden Auth.js y el guardia del cron.
+ *
+ * Se REUTILIZA el que ya estaba en .env.vercel. Generar uno nuevo en cada corrida
+ * parecia inofensivo hasta pensarlo: si ya se pego en Vercel y el archivo se vuelve
+ * a generar —por ejemplo para completar DATABASE_URL—, los dos valores dejan de
+ * coincidir. Con AUTH_SECRET eso cierra la sesion de todos; con CRON_SECRET el cron
+ * empieza a recibir 401 y la corrida diaria muere en silencio.
+ */
+const secreto = (nombre) => anterior[nombre] || randomBytes(32).toString('base64')
 
 const FALTA = ''
 
@@ -44,8 +55,8 @@ const variables = [
 
   // Nuevos: no se comparte el secreto de desarrollo con produccion. Si el de
   // desarrollo se filtra alguna vez, no sirve para firmar sesiones reales.
-  ['AUTH_SECRET', secreto(), 'GENERADO nuevo'],
-  ['CRON_SECRET', secreto(), 'GENERADO nuevo'],
+  ['AUTH_SECRET', secreto('AUTH_SECRET'), anterior.AUTH_SECRET ? 'el que ya estaba' : 'GENERADO nuevo'],
+  ['CRON_SECRET', secreto('CRON_SECRET'), anterior.CRON_SECRET ? 'el que ya estaba' : 'GENERADO nuevo'],
 
   ['AUTH_URL', 'https://caja.japybrand.com', 'fijo'],
   // Auth.js v5 lo exige detras del proxy de Vercel: sin esto el callback de Google
