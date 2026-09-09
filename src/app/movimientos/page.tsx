@@ -3,6 +3,7 @@ import { ANIO_ACTIVO, esEstado, esFuente } from '@/lib/dominio'
 import { TablaMovimientos } from './TablaMovimientos'
 import type { Prisma } from '@prisma/client'
 import { contiene } from '@/lib/consulta'
+import { compromisoQueDuplica } from '@/lib/duplicados'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,6 +65,14 @@ export default async function PaginaMovimientos({ searchParams }: Props) {
   ])
 
   // El orden por estado descendente deja "por_revisar" arriba, que es lo que queremos.
+  // Qué movimientos por revisar repiten una deuda ya declarada. Solo se consulta
+  // para los de la bandeja: los confirmados ya pasaron por el bloqueo.
+  const avisos = new Map<string, string>()
+  for (const m of movimientos.filter((x) => x.estado === 'por_revisar')) {
+    const dup = await compromisoQueDuplica(m)
+    if (dup) avisos.set(m.id, dup.motivo)
+  }
+
   const filas = movimientos.map((movimiento) => ({
     id: movimiento.id,
     fecha: movimiento.fecha.toISOString().slice(0, 10),
@@ -78,6 +87,7 @@ export default async function PaginaMovimientos({ searchParams }: Props) {
     categoriaNombre: movimiento.categoria.nombre,
     proveedorId: movimiento.proveedorId,
     proveedorNombre: movimiento.proveedor?.nombre ?? null,
+    duplicaCompromiso: avisos.get(movimiento.id) ?? null,
     correo: movimiento.correo
       ? {
           gmailId: movimiento.correo.gmailId,

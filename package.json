@@ -48,7 +48,8 @@
     "reclasificar-ingram": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/reclasificar-ingram.ts",
     "importar-datos": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/importar-datos.ts",
     "verificar-migracion": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/verificar-migracion.ts",
-    "probar-alertas": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/probar-alertas.ts"
+    "probar-alertas": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/probar-alertas.ts",
+    "revisar-duplicados": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env scripts/revisar-duplicados-compromiso.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

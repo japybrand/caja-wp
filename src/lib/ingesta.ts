@@ -1,5 +1,6 @@
 import 'server-only'
 import { prisma } from '@/lib/prisma'
+import { compromisoQueDuplica } from '@/lib/duplicados'
 import { leerRemitentes } from '@/lib/dominio'
 import { clienteGmail, cabecera, partirRemitente, conReintento, enTandas } from '@/lib/gmail/cliente'
 import { extraerContenido } from '@/lib/gmail/contenido'
@@ -375,6 +376,17 @@ export async function ejecutarIngesta(opciones: OpcionesIngesta): Promise<Result
             return Math.abs(m.montoCLP - conversion.montoCLP) / mayor <= TOLERANCIA_DUPLICADO
           })
 
+          // Un compromiso declarado es la misma deuda registrada en el mes en que se
+          // paga. Se busca aparte porque el anti-duplicado de arriba mira solo el mes
+          // del movimiento, y la factura puede llegar uno o dos meses antes.
+          const compromiso = await compromisoQueDuplica({
+            anio,
+            proveedorId: proveedor.id,
+            montoCLP: conversion.montoCLP,
+            montoOriginal: d.moneda === 'CLP' ? null : d.monto,
+            monedaOriginal: d.moneda,
+          })
+
           const notas: string[] = []
           if (esPagoPrevisto) {
             notas.push(
@@ -393,6 +405,7 @@ export async function ejecutarIngesta(opciones: OpcionesIngesta): Promise<Result
             }
           }
           if (duplicado) notas.push(`posible duplicado de ${duplicado.id}`)
+          if (compromiso) notas.push(compromiso.motivo)
           if (remitenteCompartido && !eleccionFirme) {
             notas.push(
               `remitente compartido: el modelo no pudo decidir entre ${candidatos
@@ -417,6 +430,8 @@ export async function ejecutarIngesta(opciones: OpcionesIngesta): Promise<Result
             d.confianza >= CONFIANZA_PARA_CONFIRMAR &&
             conversion.montoCLP > 0 &&
             !duplicado &&
+            // Nunca se confirma solo algo que repite una deuda ya declarada.
+            !compromiso &&
             d.coincideConProveedor &&
             eleccionFirme &&
             // Un pago previsto nunca se confirma solo: todavía no ha salido la plata.
@@ -428,6 +443,7 @@ export async function ejecutarIngesta(opciones: OpcionesIngesta): Promise<Result
             prefijos.push(d.moneda === 'USD' ? 'PAGO PREVISTO (CLP estimado)' : 'PAGO PREVISTO')
           }
           if (duplicado) prefijos.push(`posible duplicado de ${duplicado.id}`)
+          if (compromiso) prefijos.push('DUPLICA UN COMPROMISO DECLARADO')
           const descripcion = [...prefijos, d.descripcion].join(' · ').slice(0, 200)
 
           const movimiento = await prisma.movimiento.create({

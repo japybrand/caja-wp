@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requerirSesion } from '@/lib/sesion'
 import { esEstado, esMoneda } from '@/lib/dominio'
+import { compromisoQueDuplica } from '@/lib/duplicados'
 
 export interface Resultado {
   ok: boolean
@@ -136,12 +137,25 @@ export async function eliminarMovimiento(id: string): Promise<Resultado> {
   return { ok: true }
 }
 
-/** Marca un movimiento por revisar como confirmado, sin abrir el formulario. */
+/**
+ * Marca un movimiento por revisar como confirmado, sin abrir el formulario.
+ *
+ * Se niega a confirmar algo que repita un compromiso ya declarado. Es el único
+ * bloqueo duro de la pantalla, y está porque el error que evita no se ve: los dos
+ * registros quedan en meses distintos, cada uno parece legítimo por separado, y el
+ * flujo sigue cuadrando con la deuda contada dos veces.
+ *
+ * La salida, si el bloqueo se equivoca, es el formulario de edición: cambiar el
+ * monto o el proveedor ahí es un acto deliberado, no un clic de más.
+ */
 export async function confirmarMovimiento(id: string): Promise<Resultado> {
   await requerirSesion()
 
   const existente = await prisma.movimiento.findUnique({ where: { id } })
   if (!existente) return { ok: false, error: 'El movimiento ya no existe.' }
+
+  const compromiso = await compromisoQueDuplica(existente)
+  if (compromiso) return { ok: false, error: compromiso.motivo }
 
   await prisma.movimiento.update({ where: { id }, data: { estado: 'confirmado' } })
 

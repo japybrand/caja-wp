@@ -2,6 +2,7 @@
 
 import { Fragment, useMemo, useState, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { AlertTriangle } from 'lucide-react'
 import { ETIQUETA_ESTADO, ETIQUETA_FUENTE, FUENTES, ESTADOS, MESES, MONEDAS } from '@/lib/dominio'
 import { formatearCLPConCero, parsearCLP } from '@/lib/formato'
 import { sincronizarAhora, descartarCorreo } from './acciones-sync'
@@ -23,6 +24,8 @@ export interface FilaMovimiento {
   descripcion: string
   fuente: string
   estado: string
+  /** Frase de aviso si el movimiento repite un compromiso ya declarado. */
+  duplicaCompromiso: string | null
   categoriaId: string
   categoriaNombre: string
   proveedorId: string | null
@@ -539,7 +542,20 @@ export function TablaMovimientos({
                   <td className="text-tenue">
                     {movimiento.proveedorNombre ?? '—'}
                   </td>
-                  <td>{movimiento.descripcion || '—'}</td>
+                  <td>
+                    {movimiento.descripcion || '—'}
+                    {/*
+                      El aviso va en la fila y no escondido tras el botón del correo:
+                      es la única señal de que confirmar contaría la misma deuda dos
+                      veces, y el error que evita no se ve en ningún total.
+                    */}
+                    {movimiento.duplicaCompromiso ? (
+                      <div className="mt-1 flex items-start gap-1.5 text-[11.5px] text-negativo">
+                        <AlertTriangle size={13} strokeWidth={2} className="mt-px shrink-0" />
+                        <span>{movimiento.duplicaCompromiso}</span>
+                      </div>
+                    ) : null}
+                  </td>
                   <td
                     className={
                       'cifra px-3 py-1.5 text-right ' + (movimiento.montoCLP < 0 ? 'negativo' : '')

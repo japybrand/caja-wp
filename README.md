@@ -1115,6 +1115,35 @@ la pantalla de consentimiento. Con un solo usuario y un scope de solo lectura la
 verificación de Google es trámite, y es lo que corresponde hacer si esto va a quedar
 funcionando solo.
 
+### Una deuda declarada no se puede contar dos veces
+
+PayPal avisó por los 1.467 USD de Juan Pablo Ruiz de agosto y la ingesta creó el
+movimiento en septiembre, que es cuando llegó el correo. La misma deuda ya estaba
+declarada como compromiso en octubre, que es cuando se paga. Septiembre quedó
+inflado en 1.369.400 y **nada lo mostraba**: los dos registros están en meses
+distintos, cada uno parece legítimo por separado y el flujo sigue cuadrando.
+
+El anti-duplicado de la ingesta no podía verlo porque busca dentro del mismo mes.
+Sirve para lo que fue pensado —que la primera corrida no recree los recibos que ya
+trajo el Excel— pero un compromiso no está atado al mes en que llega la factura: la
+factura de agosto llega en septiembre y se paga en octubre, tres meses y una sola
+deuda.
+
+`src/lib/duplicados.ts` compara contra los compromisos de todo el año y **en moneda
+de origen** antes que en pesos: los dos registros de esta deuda quedaron en
+1.369.400 y 1.370.912, distintos en pesos por el tipo de cambio del día e idénticos
+en dólares. Se usa en tres lugares:
+
+- La ingesta no confirma sola nada que repita un compromiso, y lo anota en la glosa.
+- `confirmarMovimiento` se **niega** a confirmarlo. Es el único bloqueo duro de la
+  pantalla. La salida, si se equivoca, es el formulario de edición: cambiar el monto
+  o el proveedor ahí es un acto deliberado, no un clic de más.
+- La bandeja lo muestra en la fila, no escondido tras el botón del correo.
+
+El compromiso es la representación válida de la deuda; el correo de PayPal es un
+aviso de cobro, no un pago. Por eso el que vuelve a la bandeja es el de la ingesta,
+y vuelve **sin borrarse**: el rastro de que el proveedor cobró queda.
+
 ### Los cuatro avisos por correo
 
 | Aviso | Cuándo evalúa | Condición | Repite |
@@ -1231,6 +1260,7 @@ sesión **a propósito**, así que todo lo que cuelgue de ellas tiene que valida
 | `npm run db:studio` | Prisma Studio |
 | `npm run exportar-datos` | Respalda la base entera a `respaldo/`. No escribe en la base |
 | `npm run proyeccion` | Recalcula las proyecciones de oct-dic desde el gasto real. `--firme` |
+| `npm run revisar-duplicados` | Devuelve a la bandeja lo que repite un compromiso. `--firme` |
 | `npm run probar-alertas` | Muestra qué avisos saldrían. `-- --fecha AAAA-MM-DD` y `--firme` |
 | `npm run importar-datos` | Reconstruye el respaldo en la base destino. `--firme` para aplicar |
 | `npm run verificar-migracion` | Compara filas, enlaces y cifras derivadas contra el respaldo |
