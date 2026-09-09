@@ -58,7 +58,9 @@ const variables = [
   ['AUTH_SECRET', secreto('AUTH_SECRET'), anterior.AUTH_SECRET ? 'el que ya estaba' : 'GENERADO nuevo'],
   ['CRON_SECRET', secreto('CRON_SECRET'), anterior.CRON_SECRET ? 'el que ya estaba' : 'GENERADO nuevo'],
 
-  ['AUTH_URL', 'https://caja.japybrand.com', 'fijo'],
+  // El dominio de produccion real. `caja.japybrand.com` fue el que se planeo y
+  // nunca se uso: la app quedo en el subdominio de Vercel.
+  ['AUTH_URL', 'https://caja-wp.vercel.app', 'fijo'],
   // Auth.js v5 lo exige detras del proxy de Vercel: sin esto el callback de Google
   // se arma con el host interno y el login falla con un error que no lo explica.
   ['AUTH_TRUST_HOST', 'true', 'fijo'],

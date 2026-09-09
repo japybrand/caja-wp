@@ -1067,7 +1067,13 @@ la base, Vercel para la app y para el cron, Resend para los avisos. Cada push a
 `main` redespliega solo.
 
 El redirect `https://caja-wp.vercel.app/api/auth/callback/google` ya está autorizado
-en Google Cloud, junto con el de `localhost:3000` para desarrollo.
+en Google Cloud, junto con el de `localhost:3000` para desarrollo, y `AUTH_URL` en
+Vercel apunta a ese mismo dominio.
+
+`caja.japybrand.com` fue el dominio que se planeó y nunca se usó. Si alguna vez se
+retoma, hay que comprobar antes que resuelva directo: `japybrand.cl` redirige todo a
+`japybrand.com`, y un subdominio que herede esa redirección rompe el callback de
+OAuth con un error que parece de Google y no lo es.
 
 **Los datos son de producción y no hay respaldo local en caliente.** Todo script que
 escriba simula por omisión y solo aplica con `--firme`, y el resultado de la
