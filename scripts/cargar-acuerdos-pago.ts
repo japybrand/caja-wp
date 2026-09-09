@@ -39,6 +39,14 @@ interface Plan {
   numero: string
   marco: string
   cuotaMensual: number
+  /**
+   * Monto de la última cuota, cuando no es igual a las demás.
+   *
+   * El acuerdo con Inmotion cierra con una cuota mayor —1.470.439 contra 1.166.378—
+   * y esa diferencia no es un detalle: sin ella la proyección de enero de 2027 sale
+   * 304.061 corta y el total del acuerdo no cuadra.
+   */
+  montoUltimaCuota?: number
   /** Primera cuota del calendario: [anio, mes]. */
   desde: [number, number]
   /** Cuántas cuotas van desde ahí. */
@@ -67,24 +75,30 @@ const PLANES: Plan[] = [
     numero: 'acuerdo',
     marco: 'Acuerdo directo',
     cuotaMensual: 1_166_378,
-    // Septiembre entra al calendario aunque Pipe contó 11 desde octubre: la cuota de
-    // septiembre está impaga y sin ella no aparecería en /obligaciones ni avisaría.
-    // Marzo a agosto quedan fuera porque ya se pagaron y su monto real viene de la
-    // cartola; meterlas al calendario no agregaría nada y arriesgaría pisarlas.
+    montoUltimaCuota: 1_470_439,
+    // Solo las cinco que faltan. Las seis de marzo a agosto ya están pagadas y viven
+    // en el flujo con su monto real tomado de la cartola: meterlas al calendario no
+    // agregaría nada y arriesgaría pisar un dato conciliado con uno supuesto.
     desde: [2026, 9],
-    cuotas: 12,
+    cuotas: 5,
     pagadas: [],
-    nota: 'Doce cuotas desde septiembre de 2026 hasta agosto de 2027. Las seis de marzo a agosto de 2026 ya están pagadas y viven en el flujo con su monto real de la cartola.',
+    nota: 'Acuerdo de 11 cuotas por 13.134.219: diez de 1.166.378 y la última de 1.470.439. Las seis primeras, de marzo a agosto de 2026, están pagadas y conciliadas contra la cartola. Aquí van las cinco que faltan, de septiembre de 2026 a enero de 2027.',
   },
 ]
 
 const clave = (anio: number, mes: number): string => `${anio}-${String(mes).padStart(2, '0')}`
 
-function calendario(plan: Plan): { anio: number; mes: number; pagada: boolean }[] {
+function calendario(plan: Plan): { anio: number; mes: number; monto: number; pagada: boolean }[] {
   const salida = []
   let [anio, mes] = plan.desde
   for (let i = 0; i < plan.cuotas; i += 1) {
-    salida.push({ anio, mes, pagada: plan.pagadas.includes(clave(anio, mes)) })
+    const ultima = i === plan.cuotas - 1
+    salida.push({
+      anio,
+      mes,
+      monto: ultima ? (plan.montoUltimaCuota ?? plan.cuotaMensual) : plan.cuotaMensual,
+      pagada: plan.pagadas.includes(clave(anio, mes)),
+    })
     mes += 1
     if (mes > 12) {
       mes = 1
@@ -118,10 +132,13 @@ async function main(): Promise<void> {
       `  calendario  ${cuotas.length} cuotas, de ${MESES[(plan.desde[1] ?? 1) - 1]?.toLowerCase()} ${plan.desde[0]}` +
         ` a ${MESES[(ultima?.mes ?? 1) - 1]?.toLowerCase()} ${ultima?.anio}`,
     )
-    console.log(`  por pagar   ${porPagar.length} cuotas, ${clp(porPagar.length * plan.cuotaMensual)}`)
+    console.log(
+      `  por pagar   ${porPagar.length} cuotas, ${clp(porPagar.reduce((a, c) => a + c.monto, 0))}`,
+    )
     for (const c of cuotas) {
       console.log(
-        `    ${MESES[c.mes - 1]?.slice(0, 3).toLowerCase()} ${c.anio}  ${clp(plan.cuotaMensual).padStart(11)}  ${c.pagada ? 'pagada' : 'pendiente'}`,
+        `    ${MESES[c.mes - 1]?.slice(0, 3).toLowerCase()} ${c.anio}  ${clp(c.monto).padStart(11)}  ${c.pagada ? 'pagada' : 'pendiente'}` +
+          (c.monto !== plan.cuotaMensual ? '   <- cuota final, monto distinto' : ''),
       )
     }
 
@@ -147,7 +164,7 @@ async function main(): Promise<void> {
         obligacionId: obligacion.id,
         anio: c.anio,
         mes: c.mes,
-        monto: plan.cuotaMensual,
+        monto: c.monto,
         estado: c.pagada ? 'pagada' : 'pendiente',
       })),
     })

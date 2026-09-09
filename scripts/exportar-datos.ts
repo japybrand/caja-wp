@@ -74,7 +74,11 @@ async function main(): Promise<void> {
   }
 
   mkdirSync(CARPETA, { recursive: true })
-  const nombre = `datos-${new Date().toISOString().slice(0, 10)}.json`
+  // Fecha Y HORA en el nombre. Con solo la fecha, dos respaldos del mismo día se
+  // pisaban: el de producción sobrescribió al que documentaba el origen de la
+  // migración. Un respaldo que borra otro respaldo no es un respaldo.
+  const sello = new Date().toISOString().slice(0, 16).replace('T', '-').replace(':', '')
+  const nombre = `datos-${sello}-${respaldo.origen === 'postgresql' ? 'prod' : 'local'}.json`
   const destino = path.join(CARPETA, nombre)
   writeFileSync(destino, JSON.stringify(respaldo, null, 1), 'utf-8')
 
