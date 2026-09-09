@@ -1065,6 +1065,25 @@ sigue viviendo en `/flujo` y `/obligaciones`.
 Supabase para la base, Vercel para la app, Resend para los avisos. El dominio es
 `caja.japybrand.com`.
 
+### La clave de producción vive en un archivo aparte
+
+Los scripts cargan `--env-file=.env.local --env-file=.env`, y en Node **el último
+archivo gana**. Con `DATABASE_URL` en `.env.local` y el `file:./dev.db` todavía en
+`.env`, los scripts habrían seguido escribiendo en SQLite mientras la aplicación
+apuntaba a Supabase, sin ningún error visible: el peor tipo de falla, porque los dos
+lados funcionan y dicen cosas distintas.
+
+Por eso las credenciales de producción van en `.env.produccion`, que los comandos
+`migrar:*` cargan de último y el entorno de desarrollo no carga nunca. `.env.local`
+y `.env` quedan intactos y la app local sigue en SQLite mientras se migra.
+
+`npm run migrar:probar` comprueba la conexión antes de escribir nada, y distingue
+las tres formas de que falle: la clave sin codificar, la clave equivocada o el
+proyecto todavía arrancando. Detecta además los caracteres que rompen una URL si no
+van en `encodeURIComponent`. **Nada de lo que imprime lleva la contraseña**: los
+errores de Postgres a veces traen la cadena de conexión completa, así que todo pasa
+por un enmascarador antes de salir por pantalla.
+
 ### Los ids se conservan al migrar, y eso es todo lo que importa
 
 `npm run exportar-datos` deja la base entera en `respaldo/datos-AAAA-MM-DD.json`;
@@ -1279,6 +1298,10 @@ sesión **a propósito**, así que todo lo que cuelgue de ellas tiene que valida
 | `npm run importar-compras` | Importa el Registro de Compras del SII y muestra el IVA. `--firme` |
 | `npm run db:seed` | Solo precarga las categorías |
 | `npm run db:studio` | Prisma Studio |
+| `npm run migrar:probar` | Comprueba la conexión con Supabase. No escribe nada |
+| `npm run migrar:push` | Crea las tablas en Supabase con DIRECT_URL |
+| `npm run migrar:datos` | Importa el respaldo a Supabase. `--firme` para aplicar |
+| `npm run migrar:verificar` | Verifica la migración contra el respaldo |
 | `npm run exportar-datos` | Respalda la base entera a `respaldo/`. No escribe en la base |
 | `npm run proyeccion` | Recalcula las proyecciones de oct-dic desde el gasto real. `--firme` |
 | `npm run revisar-duplicados` | Devuelve a la bandeja lo que repite un compromiso. `--firme` |

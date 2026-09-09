@@ -36,6 +36,12 @@ Flujo_de_Caja_2026_-_Japybrand_WP.xlsx
 # Renders temporales para revisar el diseño. No es parte de la app.
 .vista/
 
+# Credenciales de la base de produccion. Van aparte de .env.local a proposito:
+# los scripts de migracion la cargan de ULTIMA para que gane sobre la local, y el
+# entorno de desarrollo sigue apuntando a SQLite sin que haya que tocar nada.
+# `.env*.local` ya cubre este nombre, pero se anota explicito para que se vea.
+/.env.produccion
+
 # Respaldos de la base en JSON, para migrar entre SQLite y Postgres.
 # Llevan la cartola completa, los sueldos y el flujo entero: es el mismo dato que
 # /cartolas/. Nunca se versionan.
