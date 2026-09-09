@@ -2,13 +2,20 @@ import { AlertTriangle, CalendarDays, CheckCircle2, FileText, Landmark, Users } 
 import type { EstadoObligaciones } from '@/lib/obligaciones'
 import { Cifra, Marca, Pagina, Tarjeta, Vacio, clp } from '@/componentes/ui'
 import { TablaF29 } from './TablaF29'
+import { PendientesDePago } from './PendientesDePago'
 
 const ETIQUETA_TIPO: Record<string, string> = {
   convenio_tgr: 'Convenio',
   linea_credito: 'Línea de crédito',
 }
 
-export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
+export function PanelObligaciones({
+  estado,
+  hoy,
+}: {
+  estado: EstadoObligaciones
+  hoy: { anio: number; mes: number }
+}) {
   const { obligaciones, calendario, cotizaciones, totales, cotizacionesAtrasadas } = estado
   const { compromisos, totalCompromisos, f29, totalF29 } = estado
   const anioF29 = f29[0]?.anioPeriodo ?? new Date().getFullYear()
@@ -41,6 +48,10 @@ export function PanelObligaciones({ estado }: { estado: EstadoObligaciones }) {
       </Tarjeta>
 
       <div className="mt-e5 grid gap-e3">
+        {/* Lo primero después del estado: lo que hay que pagar ahora y se puede
+            dar por pagado sin esperar a la cartola. */}
+        <PendientesDePago estado={estado} hoy={hoy} />
+
         {cotizacionesAtrasadas > 0 ? (
           <Tarjeta titulo="Atención" icono={AlertTriangle} tono="negativo">
             <p className="text-[12.5px]">

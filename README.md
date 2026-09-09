@@ -1144,6 +1144,27 @@ El compromiso es la representación válida de la deuda; el correo de PayPal es 
 aviso de cobro, no un pago. Por eso el que vuelve a la bandeja es el de la ingesta,
 y vuelve **sin borrarse**: el rastro de que el proveedor cobró queda.
 
+### Marcar pagado sin esperar a la cartola
+
+La cartola se descarga a mano y llega cuando llega, así que entre pagar una cuota y
+verla conciliada pasan días. En ese hueco la obligación seguía apareciendo pendiente
+y el aviso por correo la reportaba como atrasada. Avisar por algo ya resuelto es el
+camino más corto a que se dejen de leer todos los avisos.
+
+La tarjeta **Pendiente de pago**, arriba de `/obligaciones`, lista las cuotas y
+cotizaciones cuyo mes ya llegó y no están pagadas, con un botón para darlas por
+pagadas. Es reversible: marcar por error se deshace en el mismo lugar.
+
+`CuotaObligacion.fechaPago` puesta con `movimientoBancario` en null significa
+**pagada por declaración**: alguien dice que salió, el banco todavía no lo muestra.
+Cuando el cargo aparezca, la conciliación lo enlaza y quedan las dos cosas. Una
+cuota que ya tiene cargo del banco **no se puede desmarcar** desde ahí: la cartola
+manda, y para deshacer eso hay que romper la conciliación en `/banco`.
+
+La distinción importa por una razón concreta: el **"ya pagado" del panel sigue
+saliendo de la cartola**, no de esta marca. Una declaración no es evidencia de que
+la plata salió de la cuenta, y el panel proyecta desde el saldo real del banco.
+
 ### Los cuatro avisos por correo
 
 | Aviso | Cuándo evalúa | Condición | Repite |

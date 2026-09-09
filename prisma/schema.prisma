@@ -394,6 +394,14 @@ model CuotaObligacion {
   monto                Int
   /// por_generar | pendiente | pagada | atrasada
   estado               String               @default("pendiente")
+  /// Cuando se dio por pagada.
+  ///
+  /// Existe para el caso en que se paga y el cargo todavia no llega a la cartola:
+  /// entre el pago y la cartola pueden pasar dias, y en ese hueco la cuota figuraba
+  /// como pendiente y disparaba avisos por algo ya resuelto. Con `movimientoBancario`
+  /// en null y esta fecha puesta, la cuota esta pagada por declaracion; cuando el
+  /// cargo aparezca, la conciliacion lo enlaza y quedan las dos cosas.
+  fechaPago            DateTime?
   /// Sin @unique a proposito: un solo cargo puede pagar varias cuotas. El pago
   /// del 07/09/2026 por 431.398 cubrio la cuota de septiembre de dos convenios.
   movimientoBancarioId String?

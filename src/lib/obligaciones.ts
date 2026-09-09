@@ -13,10 +13,15 @@ import { f29PorMes, type F29DelMes } from '@/lib/sii/f29'
  */
 
 export interface CuotaVista {
+  id: string
   anio: number
   mes: number
   monto: number
   estado: string
+  /** Puesta cuando se declaró pagada sin que el cargo esté en la cartola todavía. */
+  fechaPago: string | null
+  /** true si hay un cargo del banco enlazado. */
+  conCargo: boolean
 }
 
 export interface ObligacionVista {
@@ -53,6 +58,7 @@ export interface ColumnaCalendario {
 }
 
 export interface CotizacionVista {
+  id: string
   anio: number
   mes: number
   etiqueta: string
@@ -149,7 +155,15 @@ export async function estadoObligaciones(hoy: Date = new Date()): Promise<Estado
       totalComprometido: suma(o.cuotas),
       primerMes: primera ? { anio: primera.anio, mes: primera.mes } : null,
       ultimoMes: ultima ? { anio: ultima.anio, mes: ultima.mes } : null,
-      cuotas: o.cuotas.map((c) => ({ anio: c.anio, mes: c.mes, monto: c.monto, estado: c.estado })),
+      cuotas: o.cuotas.map((c) => ({
+        id: c.id,
+        anio: c.anio,
+        mes: c.mes,
+        monto: c.monto,
+        estado: c.estado,
+        fechaPago: c.fechaPago ? c.fechaPago.toISOString().slice(0, 10) : null,
+        conCargo: c.movimientoBancarioId !== null,
+      })),
     }
   })
 
@@ -196,6 +210,7 @@ export async function estadoObligaciones(hoy: Date = new Date()): Promise<Estado
     obligaciones,
     calendario,
     cotizaciones: cotizaciones.map((c) => ({
+      id: c.id,
       anio: c.anioPeriodo,
       mes: c.mesPeriodo,
       etiqueta: etiquetaMes(c.anioPeriodo, c.mesPeriodo),
