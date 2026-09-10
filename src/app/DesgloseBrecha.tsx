@@ -160,8 +160,19 @@ export function DesgloseBrecha({ panel }: { panel: Panel }) {
         <table className="tabla">
           <tbody>
             <Linea concepto="Saldo inicial de enero" monto={d.saldoInicial} />
+            {/*
+              La fecha real y no "hoy". La suma llega hasta el último movimiento
+              cargado, no hasta el día de hoy, y decir "hoy" no era una imprecisión
+              de redacción: hacía creer que la cartola estaba al día. Con dos días
+              de desfase la diferencia es invisible; con veinte, el saldo se lee como
+              actual cuando no lo es.
+            */}
             <Linea
-              concepto="Movimientos del banco hasta hoy"
+              concepto={
+                fechaSaldo
+                  ? `Movimientos del banco hasta el ${fechaEnPalabras(fechaSaldo)}`
+                  : 'Movimientos del banco cargados'
+              }
               monto={d.movimientosHastaHoy}
               signo="+"
             />

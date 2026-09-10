@@ -136,6 +136,14 @@ export interface Panel {
    */
   desglose: {
     saldoInicial: number
+    /**
+     * Lo que movió el banco hasta el ÚLTIMO MOVIMIENTO CARGADO, no hasta hoy.
+     *
+     * El nombre dice "hasta hoy" por historia y la etiqueta decía lo mismo, pero la
+     * suma corta en `fechaSaldo`. Con la cartola al día la diferencia no se nota;
+     * con desfase, hacía leer el saldo como actual cuando no lo era. La interfaz
+     * muestra la fecha real.
+     */
     movimientosHastaHoy: number
     ingresosDelMes: number
     yaCobrado: number
