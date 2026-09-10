@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { NUMEROS_MES, type Grupo } from '@/lib/dominio'
+import { FUENTES_EJECUTADAS, NUMEROS_MES, type Grupo } from '@/lib/dominio'
 import { signo } from '@/lib/sii/ventas'
 import { f29PorMesDePago } from '@/lib/sii/f29'
 
@@ -142,6 +142,16 @@ export interface Flujo {
    * no tiene—. Es lo que permite decir que AWS ya se pago y Verpex todavia no.
    */
   ejecutadoPorDetalle: Record<string, number[]>
+  /**
+   * Lo DECLARADO pagado y todavia sin respaldo del banco, por categoria y por linea.
+   *
+   * Va aparte de lo ejecutado y no sumado a el. Una declaracion dice que la plata
+   * salio, pero el saldo de la cuenta todavia la incluye: contarla como pagada
+   * bajaria "falta pagar" sobre una plata que sigue ahi y que igual va a salir. Se
+   * muestra al lado para que se vea, sin mover el numero que manda.
+   */
+  declaradoPorCategoria: Record<string, number[]>
+  declaradoPorDetalle: Record<string, number[]>
   /** Total por revisar de cada mes, sumando todas las categorías. */
   pendientePorMes: number[]
   hayPendientes: boolean
@@ -151,13 +161,9 @@ export interface Flujo {
 
 const CERO_12 = (): number[] => Array<number>(12).fill(0)
 
-/**
- * Fuentes de un Movimiento que significan "esto ya paso por la cuenta".
- *
- * `compromiso` queda fuera a proposito: es una deuda declarada que todavia no se
- * paga, justamente lo contrario.
- */
-const FUENTES_EJECUTADAS = ['cartola', 'global66']
+/** La misma lista que usa el resto de la app; vive en dominio.ts. Prisma pide un
+ * arreglo mutable, de ahi la copia. */
+const FUENTES_EJECUTADAS_LOCAL = [...FUENTES_EJECUTADAS]
 
 /** Orden en que los grupos de subtotales aparecen dentro del flujo. */
 const ENCABEZADOS: Record<string, string> = {
@@ -180,6 +186,7 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     mesesBancarios,
     reversasBancarias,
     movimientosEjecutados,
+    movimientosDeclarados,
     f29,
     cuotasObligacion,
   ] = await Promise.all([
@@ -232,8 +239,15 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
       where: {
         anio,
         estado: 'confirmado',
-        OR: [{ fuente: { in: FUENTES_EJECUTADAS } }, { bancarios: { some: {} } }],
+        OR: [{ fuente: { in: FUENTES_EJECUTADAS_LOCAL } }, { bancarios: { some: {} } }],
       },
+      select: { id: true, categoriaId: true, proveedorId: true, mes: true, montoCLP: true },
+    }),
+    // Lo declarado pagado que el banco todavia no confirma. Es el complemento exacto
+    // de la consulta de arriba: fuente 'declarado' Y sin ningun cargo enlazado. En
+    // cuanto la conciliacion le engancha uno, sale de aqui y entra alla sola.
+    prisma.movimiento.findMany({
+      where: { anio, estado: 'confirmado', fuente: 'declarado', bancarios: { none: {} } },
       select: { id: true, categoriaId: true, proveedorId: true, mes: true, montoCLP: true },
     }),
     // F29 completo, indexado por el mes en que sale la plata.
@@ -618,6 +632,13 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     if (v.origen === 'banco') sumarEn(ejecutadoPorCategoria, v.categoriaId, v.mes, v.montoCLP)
   }
 
+  const declaradoPorCategoria: Record<string, number[]> = {}
+  const declaradoPorDetalle: Record<string, number[]> = {}
+  for (const m of movimientosDeclarados) {
+    sumarEn(declaradoPorCategoria, m.categoriaId, m.mes, m.montoCLP)
+    sumarEn(declaradoPorDetalle, `${m.categoriaId}|${m.proveedorId ?? m.id}`, m.mes, m.montoCLP)
+  }
+
   const conCartola = new Set(mesesBancarios.filter((m) => m._count._all > 0).map((m) => m.mes))
   // Un mes sin cartola y sin nada operacional cargado no es una proyeccion del
   // negocio: es solo la deuda comprometida. Se marca incompleto para que su saldo
@@ -637,6 +658,8 @@ export async function calcularFlujo(anio: number): Promise<Flujo> {
     filas,
     ejecutadoPorCategoria,
     ejecutadoPorDetalle,
+    declaradoPorCategoria,
+    declaradoPorDetalle,
     pendientePorMes,
     hayPendientes: pendientePorMes.some((monto) => monto !== 0),
     naturalezaPorMes,

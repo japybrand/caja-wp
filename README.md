@@ -1232,6 +1232,35 @@ El compromiso es la representación válida de la deuda; el correo de PayPal es 
 aviso de cobro, no un pago. Por eso el que vuelve a la bandeja es el de la ingesta,
 y vuelve **sin borrarse**: el rastro de que el proveedor cobró queda.
 
+### Registro manual: declarado no es lo mismo que pagado
+
+`/movimientos` tiene un botón de registro rápido —categoría, proveedor, monto, fecha
+y nota— para anotar un pago o un cobro que todavía no llegó a la cartola. Queda con
+`fuente: 'declarado'`.
+
+**Un declarado NO cuenta como pagado, y esa es la decisión que sostiene todo.**
+Supongamos un pago de 500.000 registrado hoy que el banco todavía no muestra: el
+saldo de la cuenta **sigue incluyendo esos 500.000**. Si el declarado bajara "falta
+pagar", la brecha del mes mejoraría 500.000 sobre una plata que sigue ahí y que igual
+va a salir. Contar una declaración como pagada **cuenta dos veces la misma plata**.
+
+Así que el declarado entra al gasto del mes, se muestra aparte en el desglose —"+X
+declarado", bajo la columna de lo pagado— y no se descuenta de nada. Cuando la
+conciliación le engancha un cargo, pasa a contar como pagado **solo**: el flujo mira
+"tiene cargo enlazado" sin importarle la fuente.
+
+La conciliación prefiere los declarados cuando varios movimientos calzan, y entre dos
+desempata por cercanía de fecha. Eso es lo que evita el duplicado: el cargo real se
+pega al movimiento que ya existía en vez de convivir con él.
+
+El formulario avisa antes de guardar si el proveedor ya tiene un movimiento del mes
+con monto parecido, y ofrece reemplazarlo o agregarlo aparte. Sin ese aviso, pagar
+algo que la planilla ya proyectaba duplicaría el gasto en silencio.
+
+**Solo categorías derivadas.** Las manuales —deudas, impuestos, financiamiento—
+guardan un número por mes sin proveedor ni fecha, y registrar ahí sumaría al total
+sin dejar rastro de quién ni cuándo. Para esas está "Pendiente de pago".
+
 ### Marcar pagado sin esperar a la cartola
 
 La cartola se descarga a mano y llega cuando llega, así que entre pagar una cuota y
@@ -1384,6 +1413,7 @@ sesión **a propósito**, así que todo lo que cuelgue de ellas tiene que valida
 | `npm run migrar:verificar` | Verifica la migración contra el respaldo |
 | `npm run exportar-datos` | Respalda la base entera a `respaldo/`. No escribe en la base |
 | `npm run proyeccion` | Recalcula las proyecciones de oct-dic desde el gasto real. `--firme` |
+| `npm run ingresos-derivada` | Convierte "Ingresos no facturados" a fila con detalle. `--firme` |
 | `npm run revisar-duplicados` | Devuelve a la bandeja lo que repite un compromiso. `--firme` |
 | `npm run probar-alertas` | Muestra qué avisos saldrían. `-- --fecha AAAA-MM-DD` y `--firme` |
 | `npm run importar-datos` | Reconstruye el respaldo en la base destino. `--firme` para aplicar |

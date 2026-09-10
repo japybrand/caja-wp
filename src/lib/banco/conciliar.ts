@@ -95,6 +95,7 @@ export async function simularConciliacion(anio: number): Promise<ResumenConcilia
       where: { anio },
       select: {
         id: true,
+        fecha: true,
         mes: true,
         montoCLP: true,
         descripcion: true,
@@ -123,26 +124,56 @@ export async function simularConciliacion(anio: number): Promise<ResumenConcilia
   // Un movimiento del flujo se enlaza una sola vez.
   const yaUsados = new Set<string>()
 
+  /**
+   * El movimiento del flujo al que engancharle un cargo.
+   *
+   * ORDEN DE PREFERENCIA
+   * Cuando varios calzan, gana el DECLARADO: alguien lo escribió sabiendo que había
+   * pagado, mientras que los demás pueden ser una proyección de la planilla que
+   * quedó parecida por casualidad. Enganchar el declarado es además lo que hace que
+   * el registro manual no duplique nada: el cargo real se pega al que ya existía en
+   * vez de convivir con él.
+   *
+   * Entre dos declarados desempata la fecha, que un pago declarado sí trae exacta.
+   * Un cargo del 3 y una declaración del 2 son casi seguro lo mismo; una del 28, no.
+   */
   const buscarMovimiento = (
     proveedorId: string | null,
     mes: number,
     monto: number,
+    fecha: Date,
   ): (typeof movimientos)[number] | null => {
     const objetivo = Math.abs(monto)
+    const calza = (m: (typeof movimientos)[number]): boolean => {
+      if (m.montoCLP === objetivo) return true
+      const mayor = Math.max(Math.abs(m.montoCLP), objetivo)
+      return mayor > 0 && Math.abs(m.montoCLP - objetivo) / mayor <= TOLERANCIA
+    }
     const candidatos = movimientos.filter(
       (m) =>
         !yaUsados.has(m.id) &&
         m.mes === mes &&
-        (proveedorId === null || m.proveedorId === proveedorId),
+        (proveedorId === null || m.proveedorId === proveedorId) &&
+        calza(m),
     )
-    const exacto = candidatos.find((m) => m.montoCLP === objetivo)
-    if (exacto) return exacto
+    if (candidatos.length === 0) return null
+
+    const distancia = (m: (typeof movimientos)[number]): number =>
+      Math.abs(m.fecha.getTime() - fecha.getTime()) / 86_400_000
+
     return (
-      candidatos.find((m) => {
-        const mayor = Math.max(Math.abs(m.montoCLP), objetivo)
-        if (mayor === 0) return false
-        return Math.abs(m.montoCLP - objetivo) / mayor <= TOLERANCIA
-      }) ?? null
+      [...candidatos].sort((a, b) => {
+        // 1. Declarado antes que cualquier otra fuente.
+        const da = a.fuente === 'declarado' ? 0 : 1
+        const db = b.fuente === 'declarado' ? 0 : 1
+        if (da !== db) return da - db
+        // 2. Monto exacto antes que aproximado.
+        const ea = a.montoCLP === objetivo ? 0 : 1
+        const eb = b.montoCLP === objetivo ? 0 : 1
+        if (ea !== eb) return ea - eb
+        // 3. La fecha más cercana a la del cargo.
+        return distancia(a) - distancia(b)
+      })[0] ?? null
     )
   }
 
@@ -226,7 +257,7 @@ export async function simularConciliacion(anio: number): Promise<ResumenConcilia
         continue
       }
 
-      const movimiento = buscarMovimiento(regla?.proveedorId ?? null, b.mes, b.monto)
+      const movimiento = buscarMovimiento(regla?.proveedorId ?? null, b.mes, b.monto, b.fecha)
       if (movimiento) yaUsados.add(movimiento.id)
       propuestas.push({
         ...base,
@@ -262,7 +293,7 @@ export async function simularConciliacion(anio: number): Promise<ResumenConcilia
     // --- 2 y 3. Alias y nombre del proveedor -------------------------------
     const calce = buscarProveedor(b.descripcion, conAlias)
     if (calce) {
-      const movimiento = buscarMovimiento(calce.proveedor.id, b.mes, b.monto)
+      const movimiento = buscarMovimiento(calce.proveedor.id, b.mes, b.monto, b.fecha)
       if (movimiento) yaUsados.add(movimiento.id)
       propuestas.push({
         ...base,

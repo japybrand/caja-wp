@@ -45,7 +45,20 @@ function Celdas({ linea }: { linea: LineaEgreso }) {
   return (
     <>
       <Monto valor={linea.egreso} />
-      <Monto valor={linea.pagado} apagado />
+      <div>
+        <Monto valor={linea.pagado} apagado />
+        {/*
+          Lo declarado va debajo de lo pagado y no sumado a ello. Una declaración
+          dice que la plata salió, pero el saldo de la cuenta todavía la incluye:
+          descontarla de "falta" bajaría el número sobre una plata que igual va a
+          salir. Se ve, y no mueve nada.
+        */}
+        {linea.declarado > 0 ? (
+          <div className="t-apoyo text-right !text-alerta-claro">
+            +{clp(linea.declarado)} declarado
+          </div>
+        ) : null}
+      </div>
       <Monto valor={linea.falta} />
     </>
   )
@@ -219,7 +232,14 @@ export function DesgloseBrecha({ panel }: { panel: Panel }) {
           >
             <span>Total de {mes}</span>
             <Monto valor={d.egresosDelMes} />
-            <Monto valor={d.yaPagado} />
+            <div>
+              <Monto valor={d.yaPagado} />
+              {d.declarado > 0 ? (
+                <div className="t-apoyo text-right !text-alerta-claro">
+                  +{clp(d.declarado)} declarado
+                </div>
+              ) : null}
+            </div>
             <Monto valor={d.egresosDelMes - d.yaPagado} />
           </div>
         </div>
@@ -258,6 +278,9 @@ export function DesgloseBrecha({ panel }: { panel: Panel }) {
           egresos del mes que ya pasó por la cuenta: se reconoce porque el monto vino de la cartola
           o porque tiene un cargo del banco enlazado. Los gastos marcados como personales no son
           egresos del flujo y quedan fuera de las dos partes.
+          {d.declarado > 0
+            ? ` Los ${clp(d.declarado)} marcados como declarados son pagos que registraste a mano y que el banco todavía no muestra: siguen contando como "falta pagar" porque esa plata sigue en la cuenta, y descontarla la contaría dos veces. Cuando el cargo aparezca en la cartola, la conciliación los enlaza y pasan a "ya pagado" solos.`
+            : ''}
           {fechaSaldo
             ? ` La cartola llega al ${fechaEnPalabras(fechaSaldo)}: lo que se cobre después de esa fecha todavía no existe en el banco y aparece entero en "falta", aunque sea un cargo automático que nunca ha dejado de llegar.`
             : ''}

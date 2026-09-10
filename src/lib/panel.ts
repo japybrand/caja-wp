@@ -102,6 +102,14 @@ export interface LineaEgreso {
   nombre: string
   egreso: number
   pagado: number
+  /**
+   * Declarado pagado, sin respaldo del banco todavía.
+   *
+   * NO se resta de `falta`. Mientras el banco no muestre el cargo, la plata sigue
+   * en la cuenta: darla por salida bajaría lo que falta sobre una plata que igual
+   * va a salir, y la brecha del mes quedaría optimista por ese monto.
+   */
+  declarado: number
   falta: number
 }
 
@@ -154,6 +162,8 @@ export interface Panel {
     egresos: GrupoEgreso[]
     egresosDelMes: number
     yaPagado: number
+    /** Declarado pagado y sin respaldo del banco. No se descuenta de `porPagar`. */
+    declarado: number
     porPagar: number
   }
 
@@ -247,6 +257,8 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
    */
   const ejecutadoDe = (categoriaId: string | undefined): number =>
     categoriaId ? (flujo.ejecutadoPorCategoria[categoriaId]?.[i] ?? 0) : 0
+  const declaradoDe = (categoriaId: string | undefined): number =>
+    categoriaId ? (flujo.declaradoPorCategoria[categoriaId]?.[i] ?? 0) : 0
 
   const egresos: GrupoEgreso[] = GRUPOS_EGRESO.map((g) => {
     const categorias: CategoriaEgreso[] = flujo.filas
@@ -259,17 +271,19 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
           nombre: f.etiqueta,
           egreso,
           pagado,
+          declarado: declaradoDe(f.categoriaId),
           falta: egreso - pagado,
           detalle: (f.detalle ?? [])
             .map((linea) => {
               const suyo = linea.montos[i] ?? 0
-              const pagadoLinea =
-                flujo.ejecutadoPorDetalle[`${f.categoriaId}|${linea.clave}`]?.[i] ?? 0
+              const clave = `${f.categoriaId}|${linea.clave}`
+              const pagadoLinea = flujo.ejecutadoPorDetalle[clave]?.[i] ?? 0
               return {
                 clave: linea.clave,
                 nombre: linea.nombre,
                 egreso: suyo,
                 pagado: pagadoLinea,
+                declarado: flujo.declaradoPorDetalle[clave]?.[i] ?? 0,
                 falta: suyo - pagadoLinea,
               }
             })
@@ -285,12 +299,14 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
       nombre: g.etiqueta,
       egreso: suma((c) => c.egreso),
       pagado: suma((c) => c.pagado),
+      declarado: suma((c) => c.declarado),
       falta: suma((c) => c.falta),
       categorias,
     }
   }).filter((g) => g.egreso !== 0 || g.pagado !== 0)
 
   const yaPagado = egresos.reduce((a, g) => a + g.pagado, 0)
+  const declarado = egresos.reduce((a, g) => a + g.declarado, 0)
   const ingresosMes = fila('total_ingresos')[i] ?? 0
   const porCobrar = Math.max(ingresosMes - yaCobrado, 0)
   const porPagar = Math.max(egresosDelMes(mesActual) - yaPagado, 0)
@@ -306,6 +322,7 @@ export async function calcularPanel(anio: number, hoy: Date = new Date()): Promi
     egresos,
     egresosDelMes: egresosDelMes(mesActual),
     yaPagado,
+    declarado,
     porPagar,
   }
 

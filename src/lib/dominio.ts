@@ -13,8 +13,46 @@ export const GRUPOS = [
 ] as const
 export type Grupo = (typeof GRUPOS)[number]
 
-export const FUENTES = ['excel', 'manual', 'gmail', 'cartola', 'sii'] as const
+/**
+ * De dónde salió un movimiento. Es su procedencia, no su estado.
+ *
+ * El orden va de lo menos a lo más verificado, que es como conviene leerlas:
+ *
+ *  - `excel`      proyección de la planilla con que arrancó el año.
+ *  - `manual`     alguien lo escribió o corrigió en la app.
+ *  - `declarado`  alguien declaró haberlo pagado, pero el banco todavía no lo
+ *                 muestra. NO cuenta como pagado hasta que un cargo se le enlace:
+ *                 mientras tanto la plata sigue en la cuenta y sigue comprometida,
+ *                 y darla por salida la contaría dos veces.
+ *  - `gmail`      lo extrajo el modelo de un recibo del correo.
+ *  - `compromiso` deuda declarada que todavía no se paga. Lo contrario de un pago.
+ *  - `sii`        Registro de Ventas o de Compras.
+ *  - `global66`   export del monedero de pagos internacionales.
+ *  - `cartola`    salió de la cartola del banco. Es un hecho.
+ *
+ * `global66` y `compromiso` faltaban en esta lista aunque sí existen en la base: el
+ * filtro de /movimientos no podía filtrar por ellas.
+ */
+export const FUENTES = [
+  'excel',
+  'manual',
+  'declarado',
+  'gmail',
+  'compromiso',
+  'sii',
+  'global66',
+  'cartola',
+] as const
 export type Fuente = (typeof FUENTES)[number]
+
+/**
+ * Fuentes que significan "esto ya pasó por la cuenta".
+ *
+ * `declarado` NO está aquí a propósito, y es la decisión que sostiene todo el
+ * registro manual: una declaración no es evidencia de que la plata salió. Cuando la
+ * conciliación le enlaza un cargo, pasa a contar por el enlace, no por la fuente.
+ */
+export const FUENTES_EJECUTADAS: readonly string[] = ['cartola', 'global66']
 
 export const ESTADOS = ['confirmado', 'por_revisar'] as const
 export type Estado = (typeof ESTADOS)[number]
@@ -25,9 +63,12 @@ export type Moneda = (typeof MONEDAS)[number]
 export const ETIQUETA_FUENTE: Record<Fuente, string> = {
   excel: 'Excel',
   manual: 'Manual',
+  declarado: 'Declarado',
   gmail: 'Gmail',
-  cartola: 'Cartola',
+  compromiso: 'Compromiso',
   sii: 'SII',
+  global66: 'Global66',
+  cartola: 'Cartola',
 }
 
 export const ETIQUETA_ESTADO: Record<Estado, string> = {

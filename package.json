@@ -59,7 +59,8 @@
     "respaldo": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/exportar-datos.ts",
     "inmotion-historial": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/completar-calendario-inmotion.ts",
     "tgr": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/corregir-tgr.ts",
-    "capcut": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/arreglar-capcut.ts"
+    "capcut": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/arreglar-capcut.ts",
+    "ingresos-derivada": "node --import tsx --conditions=react-server --env-file=.env.local --env-file=.env --env-file-if-exists=.env.produccion scripts/convertir-ingresos-no-facturados.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

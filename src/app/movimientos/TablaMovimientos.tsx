@@ -6,6 +6,7 @@ import { AlertTriangle } from 'lucide-react'
 import { ETIQUETA_ESTADO, ETIQUETA_FUENTE, FUENTES, ESTADOS, MESES, MONEDAS } from '@/lib/dominio'
 import { formatearCLPConCero, parsearCLP } from '@/lib/formato'
 import { sincronizarAhora, descartarCorreo } from './acciones-sync'
+import { RegistroRapido } from './RegistroRapido'
 import {
   actualizarMovimiento,
   confirmarMovimiento,
@@ -276,10 +277,13 @@ export function TablaMovimientos({
           >
             {pendiente ? 'Sincronizando…' : 'Sincronizar ahora'}
           </button>
+          {/* Registro rápido primero: es lo que se usa a diario. "Nuevo movimiento"
+              abre el formulario completo y queda para los casos raros. */}
+          <RegistroRapido categorias={categorias} proveedores={proveedores} />
           <button
             type="button"
             onClick={abrirNuevo}
-            className="rounded bg-acento px-3 py-1.5 text-[12.5px] font-medium text-white hover:bg-blue-700"
+            className="rounded border border-linea-fuerte px-3 py-1.5 text-[12.5px] font-medium hover:bg-panel"
           >
             Nuevo movimiento
           </button>
@@ -549,6 +553,11 @@ export function TablaMovimientos({
                       es la única señal de que confirmar contaría la misma deuda dos
                       veces, y el error que evita no se ve en ningún total.
                     */}
+                    {movimiento.fuente === 'declarado' ? (
+                      <div className="t-apoyo mt-0.5 !text-alerta">
+                        Declarado: el banco todavía no lo muestra
+                      </div>
+                    ) : null}
                     {movimiento.duplicaCompromiso ? (
                       <div className="mt-1 flex items-start gap-1.5 text-[11.5px] text-negativo">
                         <AlertTriangle size={13} strokeWidth={2} className="mt-px shrink-0" />
